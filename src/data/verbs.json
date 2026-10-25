@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "动词库。type: godan=五段 / ichidan=一段 / suru=サ变(する・名词+する) / kuru=カ变(来る)。活用规则以 kana 为准；kanji 仅作书写展示，词尾送假名需与 kana 对齐。五段的个别特殊变化（行く、ある等）在活用引擎的 exceptions 表中按 kana 匹配，不写在数据里。"
+  },
+  "verbs": [
+    { "id": "kaku",    "kanji": "書く",   "kana": "かく",    "meaning": "写",       "type": "godan",   "level": "N5" },
+    { "id": "oyogu",   "kanji": "泳ぐ",   "kana": "およぐ",  "meaning": "游泳",     "type": "godan",   "level": "N5" },
+    { "id": "hanasu",  "kanji": "話す",   "kana": "はなす",  "meaning": "说、谈",   "type": "godan",   "level": "N5" },
+    { "id": "tatsu",   "kanji": "立つ",   "kana": "たつ",    "meaning": "站立",     "type": "godan",   "level": "N5" },
+    { "id": "matsu",   "kanji": "待つ",   "kana": "まつ",    "meaning": "等待",     "type": "godan",   "level": "N5" },
+    { "id": "shinu",   "kanji": "死ぬ",   "kana": "しぬ",    "meaning": "死",       "type": "godan",   "level": "N4" },
+    { "id": "asobu",   "kanji": "遊ぶ",   "kana": "あそぶ",  "meaning": "玩",       "type": "godan",   "level": "N5" },
+    { "id": "nomu",    "kanji": "飲む",   "kana": "のむ",    "meaning": "喝",       "type": "godan",   "level": "N5" },
+    { "id": "yomu",    "kanji": "読む",   "kana": "よむ",    "meaning": "读",       "type": "godan",   "level": "N5" },
+    { "id": "kaeru",   "kanji": "帰る",   "kana": "かえる",  "meaning": "回家",     "type": "godan",   "level": "N5" },
+    { "id": "hashiru", "kanji": "走る",   "kana": "はしる",  "meaning": "跑",       "type": "godan",   "level": "N5" },
+    { "id": "kau",     "kanji": "買う",   "kana": "かう",    "meaning": "买",       "type": "godan",   "level": "N5" },
+    { "id": "au",      "kanji": "会う",   "kana": "あう",    "meaning": "见面",     "type": "godan",   "level": "N5" },
+    { "id": "iku",     "kanji": "行く",   "kana": "いく",    "meaning": "去",       "type": "godan",   "level": "N5" },
+    { "id": "aru",     "kanji": "ある",   "kana": "ある",    "meaning": "有、在",   "type": "godan",   "level": "N5" },
+    { "id": "taberu",  "kanji": "食べる", "kana": "たべる",  "meaning": "吃",       "type": "ichidan", "level": "N5" },
+    { "id": "miru",    "kanji": "見る",   "kana": "みる",    "meaning": "看",       "type": "ichidan", "level": "N5" },
+    { "id": "okiru",   "kanji": "起きる", "kana": "おきる",  "meaning": "起床",     "type": "ichidan", "level": "N5" },
+    { "id": "neru",    "kanji": "寝る",   "kana": "ねる",    "meaning": "睡觉",     "type": "ichidan", "level": "N5" },
+    { "id": "oshieru", "kanji": "教える", "kana": "おしえる", "meaning": "教",      "type": "ichidan", "level": "N4" },
+    { "id": "suru",    "kanji": "する",   "kana": "する",    "meaning": "做",       "type": "suru",    "level": "N5" },
+    { "id": "benkyou-suru", "kanji": "勉強する", "kana": "べんきょうする", "meaning": "学习", "type": "suru", "level": "N5" },
+    { "id": "kuru",    "kanji": "来る",   "kana": "くる",    "meaning": "来",       "type": "kuru",    "level": "N5" }
+  ]
+}

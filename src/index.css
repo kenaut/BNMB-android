@@ -1,0 +1,150 @@
+:root {
+  /* 固定浅色主题，避免跟随系统深色模式导致文字/背景颜色错乱 */
+  color-scheme: light;
+  /* 安卓 WebView / 移动端：禁止系统字体自动缩放，去掉点击高亮 */
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f7f7f5;
+  color: #1f2328;
+  /* 禁止整页纵向回弹，避免 WebView 中出现空白拖动 */
+  overscroll-behavior-y: none;
+}
+
+/* 表单控件默认不继承字体，统一继承，避免安卓上字号不一致 */
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+button {
+  /* 去掉移动端 300ms 点击延迟 */
+  touch-action: manipulation;
+}
+
+.app-shell {
+  font-family: system-ui, sans-serif;
+  padding: 24px;
+  /* 适配全面屏 / 刘海屏的安全区（WebView 中由 env 提供） */
+  padding-top: calc(24px + env(safe-area-inset-top));
+  padding-right: calc(24px + env(safe-area-inset-right));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  padding-left: calc(24px + env(safe-area-inset-left));
+  max-width: 960px;
+  margin: 0 auto;
+  color: #1f2328;
+}
+
+.subtitle {
+  margin-top: 0;
+  color: #57606a;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  min-height: 40px;
+  padding: 6px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid #d0d7de;
+  background-color: #fff;
+  color: #1f2328;
+}
+
+.tab-button-active {
+  border-color: #0969da;
+  background-color: #ddf4ff;
+  color: #0969da;
+  font-weight: 600;
+}
+
+/* 主按钮：足够大的点击区域，兼顾触屏 */
+.btn-primary {
+  min-height: 44px;
+  padding: 8px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #fff;
+  background-color: #1f883d;
+}
+
+.btn-primary:disabled {
+  cursor: default;
+  background-color: #94d3a2;
+}
+
+/* 动词一览在窄屏上横向滚动，不挤压布局 */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 振假名：汉字上方的小字注音 */
+ruby {
+  ruby-position: over;
+}
+
+rt {
+  font-size: 0.5em;
+  font-weight: 400;
+  color: #57606a;
+  line-height: 1;
+}
+
+/* 移动端（安卓手机竖屏为主）：收紧留白、放大点击区域 */
+@media (max-width: 600px) {
+  .app-shell {
+    padding: 12px;
+    padding-top: calc(12px + env(safe-area-inset-top));
+    padding-right: calc(12px + env(safe-area-inset-right));
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    padding-left: calc(12px + env(safe-area-inset-left));
+  }
+
+  h1 {
+    font-size: 26px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* 三个标签平分整行宽度，符合移动端底部/顶部导航的点击习惯 */
+  .tabs {
+    gap: 6px;
+  }
+
+  .tab-button {
+    flex: 1;
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  .btn-primary {
+    min-height: 48px;
+  }
+}
