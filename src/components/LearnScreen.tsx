@@ -220,6 +220,19 @@ export default function LearnScreen() {
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <section style={card}>
+        <h2 style={{ marginTop: 0 }}>配套视频</h2>
+        <video
+          src={new URL("../../video.mp4", import.meta.url).href}
+          controls
+          playsInline
+          preload="metadata"
+          style={{ width: "100%", display: "block", borderRadius: 6, backgroundColor: "#000" }}
+        >
+          您的设备不支持视频播放。
+        </video>
+      </section>
+
+      <section style={card}>
         <h2 style={{ marginTop: 0 }}>动词三分类</h2>
         <p style={muted}>日语动词按活用规则分为三类。分类决定变形规则，做题前先学会判断类别。</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12 }}>

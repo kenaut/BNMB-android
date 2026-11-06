@@ -55,6 +55,37 @@ describe("toFurigana", () => {
     expect(formToFurigana({ kanji: "ない", kana: "ない" })).toEqual([{ text: "ない" }]);
   });
 
+  it("复合动词（汉字夹假名）：受け取る/うけとる", () => {
+    expect(toFurigana("受け取る", "うけとる")).toEqual([
+      { text: "受", reading: "う" },
+      { text: "け" },
+      { text: "取", reading: "と" },
+      { text: "る" },
+    ]);
+  });
+
+  it("复合动词活用形与浊音读音：思い出さない/おもいださない", () => {
+    expect(toFurigana("思い出さない", "おもいださない")).toEqual([
+      { text: "思", reading: "おも" },
+      { text: "い" },
+      { text: "出", reading: "だ" },
+      { text: "さない" },
+    ]);
+  });
+
+  it("复合动词促音便：受け取って/うけとって", () => {
+    expect(toFurigana("受け取って", "うけとって")).toEqual([
+      { text: "受", reading: "う" },
+      { text: "け" },
+      { text: "取", reading: "と" },
+      { text: "って" },
+    ]);
+  });
+
+  it("表内读音对不上时抛错", () => {
+    expect(() => toFurigana("受け取る", "じゅとる")).toThrow(/复合动词注音失败/);
+  });
+
   it("无法对齐时抛错（汉字夹假名的词）", () => {
     expect(() => toFurigana("引っ越す", "ひっこす")).toThrow(/无法对齐振假名/);
   });

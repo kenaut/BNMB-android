@@ -20,6 +20,13 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 用 WebView 承载内置的 Web 版《变にまび》。
  * 页面资源通过 WebViewAssetLoader 以 https 虚拟域名提供，
@@ -34,6 +41,8 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private ValueCallback<Uri[]> fileChooserCallback;
+    private String cachedVideoPath;
+    private byte[] cachedVideoBytes;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -70,6 +79,14 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                String path = request.getUrl().getPath();
+                // WebViewAssetLoader 不支持 HTTP Range，内置视频需要单独处理才能拖动进度
+                if (path != null && path.endsWith(".mp4")) {
+                    WebResourceResponse response = serveVideo(request, path);
+                    if (response != null) {
+                        return response;
+                    }
+                }
                 return assetLoader.shouldInterceptRequest(request.getUrl());
             }
         });
@@ -108,6 +125,91 @@ public class MainActivity extends Activity {
 
         setContentView(webView);
         webView.loadUrl(START_URL);
+    }
+
+    /** 以支持 HTTP Range 的方式返回内置视频，保证播放器可以拖动进度 */
+    private WebResourceResponse serveVideo(WebResourceRequest request, String path) {
+        String assetPath = path.startsWith("/") ? path.substring(1) : path;
+        if (assetPath.startsWith("assets/")) {
+            assetPath = assetPath.substring("assets/".length());
+        }
+
+        byte[] data;
+        try {
+            data = readVideoAsset(assetPath);
+        } catch (IOException e) {
+            return null;
+        }
+
+        long total = data.length;
+        long start = 0;
+        long end = total - 1;
+        int status = 200;
+        String reason = "OK";
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Accept-Ranges", "bytes");
+        headers.put("Content-Type", "video/mp4");
+
+        String range = findRangeHeader(request);
+        if (range != null && range.startsWith("bytes=")) {
+            String[] parts = range.substring("bytes=".length()).trim().split("-", -1);
+            try {
+                if (parts[0].isEmpty() && parts.length > 1) {
+                    long suffix = Long.parseLong(parts[1]);
+                    start = Math.max(0, total - suffix);
+                } else {
+                    start = Long.parseLong(parts[0]);
+                    if (parts.length > 1 && !parts[1].isEmpty()) {
+                        end = Long.parseLong(parts[1]);
+                    }
+                }
+                if (start >= total || start > end) {
+                    Map<String, String> invalidHeaders = new HashMap<>();
+                    invalidHeaders.put("Content-Range", "bytes */" + total);
+                    return new WebResourceResponse("video/mp4", null, 416,
+                            "Range Not Satisfiable", invalidHeaders,
+                            new ByteArrayInputStream(new byte[0]));
+                }
+                end = Math.min(end, total - 1);
+                status = 206;
+                reason = "Partial Content";
+                headers.put("Content-Range", "bytes " + start + "-" + end + "/" + total);
+            } catch (NumberFormatException ignored) {
+                start = 0;
+                end = total - 1;
+            }
+        }
+
+        headers.put("Content-Length", String.valueOf(end - start + 1));
+        return new WebResourceResponse("video/mp4", null, status, reason, headers,
+                new ByteArrayInputStream(data, (int) start, (int) (end - start + 1)));
+    }
+
+    private String findRangeHeader(WebResourceRequest request) {
+        for (Map.Entry<String, String> entry : request.getRequestHeaders().entrySet()) {
+            if ("range".equalsIgnoreCase(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    /** 视频读取一次后缓存在内存中，避免拖动进度时反复解压 11MB 资源 */
+    private byte[] readVideoAsset(String assetPath) throws IOException {
+        if (cachedVideoBytes != null && assetPath.equals(cachedVideoPath)) {
+            return cachedVideoBytes;
+        }
+        try (InputStream input = getAssets().open(assetPath)) {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            cachedVideoPath = assetPath;
+            cachedVideoBytes = output.toByteArray();
+            return cachedVideoBytes;
+        }
     }
 
     /** 状态栏/导航栏与应用背景同色，并让图标适配浅色背景（含刘海屏情况） */

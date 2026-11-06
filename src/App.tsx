@@ -11,7 +11,7 @@ export default function App() {
   return (
     <main className="app-shell">
       <h1 style={{ marginBottom: 4 }}>变にまび</h1>
-      <p className="subtitle">日语动词活用训练 · 第一阶段（ます形 / ない形 / て形 / た形）</p>
+      <p className="subtitle">天天变，烦不烦？</p>
 
       <nav className="tabs" aria-label="主导航">
         <TabButton active={tab === "home"} onClick={() => setTab("home")}>
