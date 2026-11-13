@@ -1,15 +1,23 @@
 import { useState } from "react";
+import type { ConjugatableFormId } from "../domain/conjugate";
 import { verbs } from "../data/verbs";
 import { createQuestion, type Question } from "../quiz/quiz";
 import { loadProgress } from "../storage/persistence";
-import { getUnlockedForms } from "../training/mastery";
+import { getAvailableForms } from "../training/mastery";
 import QuestionCard from "./QuestionCard";
 
-/** 自由练习：全部动词 + 已解锁形态，混合题型与方向 */
-function nextQuestion(): Question {
+interface QuizProps {
+  /** 自选变形范围（空/不传 = 按练习模式默认范围） */
+  forms?: ConjugatableFormId[];
+  onBack?: () => void;
+}
+
+/** 自由练习：全部动词 + 指定形态范围，混合题型与方向 */
+function nextQuestion(forms?: ConjugatableFormId[]): Question {
+  const scope = forms && forms.length > 0 ? forms : getAvailableForms(loadProgress());
   return createQuestion(
     verbs,
-    getUnlockedForms(loadProgress()),
+    scope,
     Math.random,
     Math.random() < 0.5 ? "choice" : "input",
     Math.random() < 0.5 ? "reverse" : "forward",
@@ -17,8 +25,8 @@ function nextQuestion(): Question {
 }
 
 /** 自由练习（不计分、不限题数）：原有功能，改为复用 QuestionCard */
-export default function Quiz({ onBack }: { onBack?: () => void }) {
-  const [question, setQuestion] = useState<Question>(() => nextQuestion());
+export default function Quiz({ forms, onBack }: QuizProps) {
+  const [question, setQuestion] = useState<Question>(() => nextQuestion(forms));
 
   return (
     <div>
@@ -41,7 +49,7 @@ export default function Quiz({ onBack }: { onBack?: () => void }) {
       <QuestionCard
         key={`${question.verb.id}-${question.form}-${question.direction}-${question.kind}`}
         question={question}
-        onContinue={() => setQuestion(nextQuestion())}
+        onContinue={() => setQuestion(nextQuestion(forms))}
       />
     </div>
   );

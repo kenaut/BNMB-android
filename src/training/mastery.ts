@@ -1,4 +1,4 @@
-import type { ConjugatableFormId } from "../domain/conjugate";
+import { CONJUGATABLE_FORMS, type ConjugatableFormId } from "../domain/conjugate";
 import type { UserProgress } from "../storage/progress";
 
 /**
@@ -57,4 +57,13 @@ export function unmasteredInCurrentBatch(progress: UserProgress): number {
     }
   }
   return 0;
+}
+
+/**
+ * 当前可练习的形态（出题范围，按练习模式区分）：
+ * - free（自由模式）：全部 11 种活用形直接开放
+ * - adventure（闯关模式，含未选择时的默认）：按分批解锁规则
+ */
+export function getAvailableForms(progress: UserProgress): ConjugatableFormId[] {
+  return progress.practiceMode === "free" ? [...CONJUGATABLE_FORMS] : getUnlockedForms(progress);
 }

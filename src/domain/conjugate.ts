@@ -221,3 +221,13 @@ export function conjugateAll(verb: Verb): Record<FormId, ConjugatedForm> {
     ConjugatedForm
   >;
 }
+
+/**
+ * 某形态在全部动词类型下的合法词尾池（供出题生成「同词干 × 错误词尾」干扰项）。
+ * 例如 て形 → [って, いて, いで, して, んで, て]：把不属于本题动词类型的
+ * 词尾拼到它的词干上，即得迷惑性最强的错误选项（見る→見って）。
+ */
+export function collectFormTails(form: ConjugatableFormId): string[] {
+  const godan = Object.values(GODAN_ROWS).map((row) => godanSuffix(row, form));
+  return [...new Set([...godan, ICHIDAN_SUFFIX[form], SURU_FORM[form]])];
+}

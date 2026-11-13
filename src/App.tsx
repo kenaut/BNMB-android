@@ -2,11 +2,23 @@ import { useState } from "react";
 import LearnScreen from "./components/LearnScreen";
 import Training from "./training/Training";
 import VerbTable from "./components/VerbTable";
+import SettingsScreen, { ModeSelectModal } from "./components/SettingsScreen";
+import { loadProgress, saveProgress } from "./storage/persistence";
+import type { PracticeMode } from "./storage/progress";
 
-type Tab = "home" | "learn" | "table";
+type Tab = "home" | "learn" | "table" | "settings";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
+  // undefined = 用户尚未选择练习模式 → 首次打开弹窗询问
+  const [mode, setMode] = useState<PracticeMode | undefined>(
+    () => loadProgress().practiceMode,
+  );
+
+  const chooseMode = (m: PracticeMode) => {
+    saveProgress({ ...loadProgress(), practiceMode: m });
+    setMode(m);
+  };
 
   return (
     <main className="app-shell">
@@ -23,6 +35,9 @@ export default function App() {
         <TabButton active={tab === "table"} onClick={() => setTab("table")}>
           动词一览
         </TabButton>
+        <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
+          设置
+        </TabButton>
       </nav>
 
       {tab === "home" && <Training />}
@@ -32,6 +47,9 @@ export default function App() {
           <VerbTable />
         </div>
       )}
+      {tab === "settings" && <SettingsScreen />}
+
+      {mode === undefined && <ModeSelectModal onChoose={chooseMode} />}
     </main>
   );
 }

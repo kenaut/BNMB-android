@@ -37,6 +37,13 @@ export interface Profile {
   nickname: string;
 }
 
+/**
+ * 练习模式：
+ * - adventure：闯关模式，形态按批解锁（初始 4 形，掌握后解锁下一批）
+ * - free：自由模式，全部形态直接开放练习
+ */
+export type PracticeMode = "adventure" | "free";
+
 export interface UserProgress {
   version: number;
   profile: Profile;
@@ -52,6 +59,11 @@ export interface UserProgress {
   verbs: Record<string, Counter>;
   /** 最近训练结果，新的在前 */
   recentResults: RecentResult[];
+  /**
+   * 练习模式。可选字段：undefined 表示用户尚未选择
+   * （首次打开应用时弹窗询问，之后可在设置页切换）。
+   */
+  practiceMode?: PracticeMode;
 }
 
 export const MAX_RECENT_RESULTS = 50;
@@ -138,5 +150,9 @@ export function sanitizeProgress(raw: unknown): UserProgress | null {
     forms: sanitizeCounterMap(raw.forms),
     verbs: sanitizeCounterMap(raw.verbs),
     recentResults,
+    practiceMode:
+      raw.practiceMode === "adventure" || raw.practiceMode === "free"
+        ? raw.practiceMode
+        : undefined,
   };
 }

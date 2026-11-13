@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { conjugate, CONJUGATABLE_FORMS } from "../domain/conjugate";
+import { formToFurigana } from "../domain/furigana";
 import { verbs } from "../data/verbs";
 import {
   checkAnswer,
@@ -8,6 +9,7 @@ import {
   createQuestion,
   createQuestions,
   createReverseOptions,
+  sameStemWrongTails,
 } from "./quiz";
 
 describe("createQuestion", () => {
@@ -50,13 +52,64 @@ describe("选择题", () => {
     }
   });
 
-  it("词库只有 1 个动词时，干扰项全部来自该动词的其他形态", () => {
-    const options = createChoiceOptions(kaku, "te", [kaku], CONJUGATABLE_FORMS, () => 0.5);
+  it("干扰项为同词干的错误词尾（词干相同、词尾不同）", () => {
+    const miru = verbs.find((v) => v.kana === "みる")!;
+    for (let i = 0; i < 20; i++) {
+      const options = createChoiceOptions(miru, "te", verbs, Math.random);
+      const correct = conjugate(miru, "te"); // 見て
+      expect(options).toContainEqual(correct);
+      const others = options.filter(
+        (o) => !(o.kanji === correct.kanji && o.kana === correct.kana),
+      );
+      expect(others).toHaveLength(3);
+      for (const o of others) {
+        expect(o.kana.startsWith("み")).toBe(true); // 词干相同
+        expect(o.kana).not.toBe(correct.kana); // 词尾不同
+      }
+    }
+  });
+
+  it("词库只有 1 个动词时，干扰项仍是同词干错误词尾", () => {
+    const options = createChoiceOptions(kaku, "te", [kaku], () => 0.5);
     expect(options).toHaveLength(4);
-    // 单词库时干扰项必须全部是该动词的其他形态（ます/ない/た/可能…中任取 3 个）
-    const allForms = CONJUGATABLE_FORMS.map((f) => conjugate(kaku, f));
+    const correct = conjugate(kaku, "te"); // 書いて
+    expect(options).toContainEqual(correct);
     for (const o of options) {
-      expect(allForms).toContainEqual(o);
+      if (o.kanji === correct.kanji && o.kana === correct.kana) continue;
+      expect(o.kana.startsWith("か")).toBe(true);
+      expect(o.kana).not.toBe(correct.kana);
+    }
+  });
+
+  it("来る 正向选择题走回退路径：干扰项来自其他动词的同形态", () => {
+    const kuru = verbs.find((v) => v.type === "kuru")!;
+    const options = createChoiceOptions(kuru, "te", verbs, () => 0.5);
+    expect(options).toHaveLength(4);
+    expect(options).toContainEqual({ kanji: "来て", kana: "きて" });
+    for (const o of options) {
+      if (o.kanji === "来て" && o.kana === "きて") continue;
+      expect(o.kanji.startsWith("来")).toBe(false);
+    }
+  });
+
+  it("同词干陷阱生成：ある 的ない形与 する 本体返回空数组（走回退）", () => {
+    const aru = verbs.find((v) => v.kana === "ある")!;
+    const suru = verbs.find((v) => v.kana === "する")!;
+    expect(sameStemWrongTails(aru, "nai")).toEqual([]);
+    expect(sameStemWrongTails(suru, "te")).toEqual([]);
+    // ある 的可能形（ありえる）含词干，可生成陷阱
+    expect(sameStemWrongTails(aru, "potential").length).toBeGreaterThan(0);
+  });
+
+  it("全库陷阱选项的汉字/假名均可对齐振假名（选项经 RubyText 渲染，不容报错）", () => {
+    for (const v of verbs) {
+      for (const form of CONJUGATABLE_FORMS) {
+        for (const t of sameStemWrongTails(v, form)) {
+          const segs = formToFurigana(t);
+          expect(segs.map((s) => s.text).join("")).toBe(t.kanji);
+          expect(segs.map((s) => s.reading ?? s.text).join("")).toBe(t.kana);
+        }
+      }
     }
   });
 

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { CONJUGATABLE_FORMS } from "../domain/conjugate";
 import { createDefaultProgress, type UserProgress } from "../storage/progress";
 import {
   allFormsUnlocked,
   countMasteredForms,
   FORM_BATCHES,
   FORM_MASTERY_CORRECT,
+  getAvailableForms,
   getUnlockedForms,
   isFormMastered,
   unmasteredInCurrentBatch,
@@ -72,5 +74,24 @@ describe("当前批次进度提示", () => {
       potential: 5, volitional: 5, imperative: 5, conditional: 5,
     });
     expect(unmasteredInCurrentBatch(p)).toBe(0);
+  });
+});
+
+describe("练习模式与可练形态", () => {
+  it("自由模式直接开放全部 11 种活用形", () => {
+    const p = createDefaultProgress();
+    p.practiceMode = "free";
+    expect(getAvailableForms(p)).toEqual([...CONJUGATABLE_FORMS]);
+  });
+
+  it("闯关模式（含尚未选择时的默认）按分批解锁出题", () => {
+    const fresh = createDefaultProgress(); // practiceMode undefined
+    expect(getAvailableForms(fresh)).toEqual(getUnlockedForms(fresh));
+    expect(getAvailableForms(fresh)).toHaveLength(4);
+
+    const adventure = withForms({ masu: 5, nai: 5, te: 5, ta: 5 });
+    adventure.practiceMode = "adventure";
+    expect(getAvailableForms(adventure)).toEqual(getUnlockedForms(adventure));
+    expect(getAvailableForms(adventure)).toHaveLength(8);
   });
 });

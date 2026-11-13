@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ConjugatableFormId } from "../domain/conjugate";
 import HomeScreen from "../components/HomeScreen";
 import ProfileCard from "../components/ProfileCard";
 import Quiz from "../components/Quiz";
@@ -14,10 +15,11 @@ import { useTrainingSession } from "./useTrainingSession";
  */
 export default function Training() {
   const session = useTrainingSession();
-  const [freePractice, setFreePractice] = useState(false);
+  // 自由练习的形态范围：null = 关闭；[] = 按练习模式默认；数组 = 自选变形
+  const [quizForms, setQuizForms] = useState<ConjugatableFormId[] | null>(null);
 
-  if (freePractice) {
-    return <Quiz onBack={() => setFreePractice(false)} />;
+  if (quizForms !== null) {
+    return <Quiz forms={quizForms} onBack={() => setQuizForms(null)} />;
   }
 
   switch (session.state.phase) {
@@ -47,7 +49,9 @@ export default function Training() {
           <HomeScreen
             total={session.state.total}
             onStart={() => session.start()}
-            onFreePractice={() => setFreePractice(true)}
+            onFreePractice={() => setQuizForms([])}
+            onCustomStart={(forms) => session.start(session.state.total, forms)}
+            onCustomPractice={(forms) => setQuizForms(forms)}
           />
           <StatsScreen />
         </div>

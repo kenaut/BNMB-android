@@ -1,4 +1,4 @@
-import { conjugate, CONJUGATABLE_FORMS } from "../domain/conjugate";
+import { collectFormTails, conjugate, CONJUGATABLE_FORMS } from "../domain/conjugate";
 import type { ConjugatedForm, FormId, Verb } from "../domain/types";
 import { verbs } from "../data/verbs";
 
@@ -38,15 +38,41 @@ function shuffled<T>(arr: readonly T[], rng: () => number): T[] {
 const dict = (v: Verb): ConjugatedForm => ({ kanji: v.kanji, kana: v.kana });
 
 /**
+ * 「同词干 × 错误词尾」陷阱干扰项：保留词干，把其他动词类型的词尾拼上去。
+ * 如 見る→て形 出 見って/見んで/見いて（五段词尾错接到一段词干）、
+ * 食べる→て形 出 食べで（浊音错误）。
+ *
+ * 来る（汉字与读音错位，词干拼接会产出汉字/假名不配对的选项）
+ * 与 ある 等例外（ない形不含词干）、する 本体（词干为空）返回空数组，走回退逻辑。
+ */
+export function sameStemWrongTails(verb: Verb, form: FormId): ConjugatedForm[] {
+  if (form === "dictionary" || verb.type === "kuru") return [];
+
+  const drop = verb.type === "suru" ? 2 : 1;
+  const stemKanji = verb.kanji.slice(0, -drop);
+  const stemKana = verb.kana.slice(0, -drop);
+  const correct = conjugate(verb, form);
+  if (stemKana.length === 0 || !correct.kana.startsWith(stemKana)) return [];
+
+  const correctTail = correct.kana.slice(stemKana.length);
+  const tails = new Set(collectFormTails(form));
+  // 经典浊音错误：て→で、た→だ（食べで / 食べだ）
+  if (correctTail === "て") tails.add("で");
+  if (correctTail === "た") tails.add("だ");
+  tails.delete(correctTail);
+
+  return [...tails].map((t) => ({ kanji: stemKanji + t, kana: stemKana + t }));
+}
+
+/**
  * 正向选择题的 4 个选项（含正确答案，已打乱）。
- * 干扰项优先取「同一动词的其他形态」（如考 て形 时混入 た形/ます形，迷惑性最强），
- * 不够 3 个再用「其他动词的同一形态」补足。按 汉字+读音 去重。
+ * 干扰项首选「同词干 × 错误词尾」陷阱（词干相同、词尾不同，迷惑性最强），
+ * 不足 3 个时（来る、例外动词等）用其他动词的同形态补足。按 汉字+读音 去重。
  */
 export function createChoiceOptions(
   verb: Verb,
   form: FormId,
   pool: Verb[] = verbs,
-  forms: readonly FormId[] = CONJUGATABLE_FORMS,
   rng: () => number = Math.random,
 ): ConjugatedForm[] {
   const key = (c: ConjugatedForm) => `${c.kanji}|${c.kana}`;
@@ -54,9 +80,8 @@ export function createChoiceOptions(
   const seen = new Set([key(correct)]);
   const distractors: ConjugatedForm[] = [];
 
-  for (const f of forms) {
-    if (f === form) continue;
-    const c = conjugate(verb, f);
+  for (const c of shuffled(sameStemWrongTails(verb, form), rng)) {
+    if (distractors.length >= 3) break;
     if (!seen.has(key(c))) {
       seen.add(key(c));
       distractors.push(c);
@@ -70,7 +95,7 @@ export function createChoiceOptions(
       distractors.push(c);
     }
   }
-  return shuffled([correct, ...distractors.slice(0, 3)], rng);
+  return shuffled([correct, ...distractors], rng);
 }
 
 /** 逆向选择题的 4 个选项：1 个正确辞书形 + 3 个其他动词的辞书形 */
@@ -100,7 +125,6 @@ function buildQuestion(
   direction: QuestionDirection,
   kind: QuestionKind,
   pool: Verb[],
-  forms: readonly FormId[],
   rng: () => number,
 ): Question {
   const given = direction === "reverse" ? conjugate(verb, form) : dict(verb);
@@ -109,7 +133,7 @@ function buildQuestion(
     kind === "choice"
       ? direction === "reverse"
         ? createReverseOptions(verb, pool, rng)
-        : createChoiceOptions(verb, form, pool, forms, rng)
+        : createChoiceOptions(verb, form, pool, rng)
       : undefined;
   return { kind, direction, verb, form, given, answer, options };
 }
@@ -128,7 +152,7 @@ export function createQuestion(
   const verb = pool[Math.floor(rng() * pool.length)];
   const form = forms[Math.floor(rng() * forms.length)];
   if (form === "dictionary") throw new Error("dictionary 不能作为出题形态");
-  return buildQuestion(verb, form, direction, kind, pool, forms, rng);
+  return buildQuestion(verb, form, direction, kind, pool, rng);
 }
 
 /**
@@ -157,7 +181,7 @@ export function createQuestions(
   return shuffled(combos, rng)
     .slice(0, count)
     .map(({ verb, form, direction }) =>
-      buildQuestion(verb, form, direction, rng() < choiceRatio ? "choice" : "input", pool, forms, rng),
+      buildQuestion(verb, form, direction, rng() < choiceRatio ? "choice" : "input", pool, rng),
     );
 }
 

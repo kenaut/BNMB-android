@@ -8,7 +8,7 @@ import {
   STORAGE_KEY,
   type StorageLike,
 } from "./persistence";
-import { createDefaultProgress, PROGRESS_VERSION, type UserProgress } from "./progress";
+import { createDefaultProgress, PROGRESS_VERSION, type PracticeMode, type UserProgress } from "./progress";
 
 function fakeStorage(initial?: Record<string, string>): StorageLike {
   const map = new Map(Object.entries(initial ?? {}));
@@ -89,6 +89,27 @@ describe("saveProgress / clearProgress", () => {
     saveProgress(sampleProgress(), s);
     clearProgress(s);
     expect(loadProgress(s)).toEqual(createDefaultProgress());
+  });
+});
+
+describe("practiceMode 持久化", () => {
+  it("合法值保存读回一致", () => {
+    const s = fakeStorage();
+    saveProgress({ ...sampleProgress(), practiceMode: "free" }, s);
+    expect(loadProgress(s).practiceMode).toBe("free");
+    saveProgress({ ...sampleProgress(), practiceMode: "adventure" }, s);
+    expect(loadProgress(s).practiceMode).toBe("adventure");
+  });
+
+  it("非法值丢弃为未选择（undefined）", () => {
+    const s = fakeStorage();
+    saveProgress({ ...sampleProgress(), practiceMode: "broken" as PracticeMode }, s);
+    expect(loadProgress(s).practiceMode).toBeUndefined();
+  });
+
+  it("旧存档没有该字段时保持未选择状态（触发首开弹窗）", () => {
+    const s = fakeStorage({ [STORAGE_KEY]: JSON.stringify(sampleProgress()) });
+    expect(loadProgress(s).practiceMode).toBeUndefined();
   });
 });
 
