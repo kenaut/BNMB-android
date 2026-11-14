@@ -22,7 +22,8 @@
 | `android/app/build.gradle.kts` | 版本号、SDK 与签名配置 |
 | `docs/ANDROID_RELEASE.md` | 正式签名、Release 构建与发布流程 |
 | `.github/workflows/android-release.yml` | GitHub Actions 自动构建 Release APK |
-| `BNMB_android-v*.apk` | 打包产物 |
+| `apks/` | 各版本 APK 归档 |
+| `release/` | 发版暂存目录（APK 副本 + 元数据 + Release 说明），不入库 |
 
 ## 构建
 

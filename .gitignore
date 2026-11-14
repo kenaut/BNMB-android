@@ -9,6 +9,9 @@ android/build/
 android/app/build/
 android/local.properties
 
+# 发版暂存目录：APK 副本与元数据，通过脚本生成，不入库
+release/
+
 # 签名文件与密码：绝不提交
 *.jks
 *.keystore

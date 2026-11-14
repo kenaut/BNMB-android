@@ -115,12 +115,12 @@ APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
 
 两个版本的签名证书不同，系统会拒绝覆盖安装，错误类似 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`。**必须先备份数据，再卸载重装。**
 
-0.3.0 的「导出数据」依赖浏览器 blob 下载，在 WebView 中不会真正落盘，因此无法直接备份。仓库根目录提供了同签名（debug）、同版本号（3）的迁移包：
+0.3.0 的「导出数据」依赖浏览器 blob 下载，在 WebView 中不会真正落盘，因此无法直接备份。仓库 `apks/` 目录提供了同签名（debug）、同版本号（3）的迁移包：
 
-1. 安装 [BNMB_android-v0.3.0-migrate.apk](../../BNMB_android-v0.3.0-migrate.apk)（可直接覆盖当前 0.3.0，数据保留）
+1. 安装 [BNMB_android-v0.3.0-migrate.apk](../../apks/BNMB_android-v0.3.0-migrate.apk)（可直接覆盖当前 0.3.0，数据保留）
 2. 打开「设置 → 数据管理 → 导出数据」，选择保存位置，得到 `bnmb-backup-YYYY-MM-DD.json`
 3. 卸载应用（系统会清除应用私有数据）
-4. 安装 `BNMB_android-v0.3.1.apk`
+4. 安装 `apks/BNMB_android-v0.3.1.apk`
 5. 打开「设置 → 数据管理 → 导入数据」，选择刚导出的 JSON
 
 迁移完成后可删除迁移包。此步骤仅适用于 0.3.0 → 0.3.1 这一次签名切换；之后的版本同签名，可直接覆盖安装。
