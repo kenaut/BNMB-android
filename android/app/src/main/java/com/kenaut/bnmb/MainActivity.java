@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -24,6 +25,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,10 +40,14 @@ public class MainActivity extends Activity {
     private static final String START_URL =
             "https://appassets.androidplatform.net/assets/www/index.html";
     private static final int FILE_CHOOSER_REQUEST = 100;
+    private static final int EXPORT_FILE_REQUEST = 101;
+    private static final String EXPORT_MIME_TYPE = "application/json";
     private static final int BACKGROUND_COLOR = Color.parseColor("#f7f7f5");
 
     private WebView webView;
     private ValueCallback<Uri[]> fileChooserCallback;
+    /** 等待用户选择保存位置后再写入的备份内容 */
+    private String pendingExportContent;
     private String cachedVideoPath;
     private byte[] cachedVideoBytes;
 
@@ -124,7 +131,54 @@ public class MainActivity extends Activity {
         });
 
         setContentView(webView);
+        // 供数据管理页导出备份：WebView 内 blob 下载不会真正落盘
+        webView.addJavascriptInterface(new NativeBridge(), "BNMBNative");
         webView.loadUrl(START_URL);
+    }
+
+    /** 暴露给网页的最小原生能力 */
+    private class NativeBridge {
+        @JavascriptInterface
+        public void saveTextFile(String fileName, String content) {
+            runOnUiThread(() -> startExport(fileName, content));
+        }
+    }
+
+    private void startExport(String fileName, String content) {
+        pendingExportContent = content;
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(EXPORT_MIME_TYPE);
+        intent.putExtra(Intent.EXTRA_TITLE, fileName);
+        try {
+            startActivityForResult(intent, EXPORT_FILE_REQUEST);
+        } catch (Exception e) {
+            pendingExportContent = null;
+            notifyExportResult(false);
+        }
+    }
+
+    private void writeExportFile(Uri uri) {
+        boolean ok = false;
+        if (uri != null && pendingExportContent != null) {
+            try (OutputStream output = getContentResolver().openOutputStream(uri, "wt")) {
+                if (output != null) {
+                    output.write(pendingExportContent.getBytes(StandardCharsets.UTF_8));
+                    ok = true;
+                }
+            } catch (IOException ignored) {
+                ok = false;
+            }
+        }
+        pendingExportContent = null;
+        notifyExportResult(ok);
+    }
+
+    private void notifyExportResult(boolean ok) {
+        if (webView != null) {
+            webView.evaluateJavascript(
+                    "window.__bnmbExportResult && window.__bnmbExportResult(" + ok + ")", null);
+        }
     }
 
     /** 以支持 HTTP Range 的方式返回内置视频，保证播放器可以拖动进度 */
@@ -239,6 +293,10 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == EXPORT_FILE_REQUEST) {
+            writeExportFile(resultCode == RESULT_OK && data != null ? data.getData() : null);
+            return;
+        }
         if (requestCode != FILE_CHOOSER_REQUEST) {
             super.onActivityResult(requestCode, resultCode, data);
             return;

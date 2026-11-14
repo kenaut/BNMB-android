@@ -10,6 +10,18 @@ import {
 
 type Status = { type: "ok" | "error"; text: string } | null;
 
+/** 安卓壳通过 addJavascriptInterface 注入：WebView 内 blob 下载不会真正落盘 */
+interface NativeExportBridge {
+  saveTextFile: (fileName: string, content: string) => void;
+}
+
+declare global {
+  interface Window {
+    BNMBNative?: NativeExportBridge;
+    __bnmbExportResult?: (ok: boolean) => void;
+  }
+}
+
 /** 数据管理：导出 / 导入 / 清除学习数据（只操作本地，不涉及任何服务器） */
 export default function DataSettings({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState<Status>(null);
@@ -17,11 +29,27 @@ export default function DataSettings({ onChanged }: { onChanged: () => void }) {
 
   const handleExport = () => {
     try {
-      const blob = new Blob([serializeProgress(loadProgress())], { type: "application/json" });
+      const text = serializeProgress(loadProgress());
+      const fileName = exportFileName();
+      const native = window.BNMBNative;
+      if (native && typeof native.saveTextFile === "function") {
+        window.__bnmbExportResult = (ok) => {
+          window.__bnmbExportResult = undefined;
+          setStatus(
+            ok
+              ? { type: "ok", text: `已保存备份文件：${fileName}` }
+              : { type: "error", text: "未能保存备份文件，请重试。" },
+          );
+        };
+        setStatus({ type: "ok", text: "请选择备份文件的保存位置…" });
+        native.saveTextFile(fileName, text);
+        return;
+      }
+      const blob = new Blob([text], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = exportFileName();
+      a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
       setStatus({ type: "ok", text: "已导出备份文件。" });
