@@ -145,7 +145,18 @@ base64 -w0 android/keystore/bnmb-release.jks > keystore.b64
 # 将 keystore.b64 的内容粘贴到 BNMB_KEYSTORE_BASE64
 ```
 
-工作流会依次执行：安装依赖 → 单元测试 → 构建 Web 资源 → 解码密钥 → `assembleRelease` → 校验签名 → 上传 APK 附件。密钥仅在运行器临时目录生成，构建结束后随运行器销毁。
+工作流会依次执行：安装依赖 → 单元测试 → 构建 Web 资源 → 解码密钥 → `assembleRelease` → 校验签名 → 打包 `BNMB_android-v<版本>.apk` / `latest.json` / `SHA256SUMS` → 上传构建产物。密钥仅在运行器临时目录生成，构建结束后随运行器销毁。
+
+推送 `v*` 标签时，工作流会额外用 `softprops/action-gh-release` 自动创建 GitHub 发行版，附件即上面三个文件，说明由 GitHub 依据提交历史自动生成（发布后可在网页上编辑）。手动触发（`workflow_dispatch`）不创建发行版。
+
+因此标准发版只需三步：改版本号并提交 → 打标签推送 → 等 Actions 完成。
+
+```bash
+git tag v0.3.3
+git push origin v0.3.3
+```
+
+> 自动发布只覆盖 GitHub；Gitee 仍需手动创建发行版并上传同样三个附件（见第 10 节）。
 
 ## 9. 发版检查清单
 

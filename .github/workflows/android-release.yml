@@ -12,7 +12,8 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  # 发布 Release 与上传附件需要写权限
+  contents: write
 
 jobs:
   build:
@@ -84,21 +85,56 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "$APK"
           "$BUILD_TOOLS/aapt" dump badging "$APK" | grep -E "^package:"
 
-      - name: Rename artifact
+      - name: Package artifacts
         run: |
           VERSION="${{ inputs.version_name }}"
           if [ -z "$VERSION" ]; then
             VERSION="${GITHUB_REF_NAME#v}"
           fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          BUILT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          VERSION_CODE=$("$BUILT/aapt" dump badging "$APK" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+          MIN_SDK=$("$BUILT/aapt" dump badging "$APK" | sed -n "s/.*sdkVersion:'\([0-9]*\)'.*/\1/p")
+
           mkdir -p dist
-          cp android/app/build/outputs/apk/release/app-release.apk "dist/BNMB_android-v${VERSION}.apk"
+          APK_NAME="BNMB_android-v${VERSION}.apk"
+          cp "$APK" "dist/$APK_NAME"
+
+          SHA256=$(sha256sum "dist/$APK_NAME" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "dist/$APK_NAME")
+          cat > dist/latest.json <<JSON
+          {
+            "versionName": "$VERSION",
+            "versionCode": $VERSION_CODE,
+            "minSdk": $MIN_SDK,
+            "sha256": "$SHA256",
+            "apk": "$APK_NAME",
+            "size": $SIZE
+          }
+          JSON
+          (cd dist && sha256sum "$APK_NAME" > SHA256SUMS)
+
+          echo "版本 $VERSION / versionCode $VERSION_CODE / $SIZE 字节"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: bnmb-release-apk
-          path: dist/*.apk
+          path: dist/*
           if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: BNMB Android v${{ env.VERSION }}
+          files: dist/*
+          fail_on_unmatched_files: true
+          prerelease: false
+          generate_release_notes: true
 
       - name: Cleanup keystore
         if: always()
