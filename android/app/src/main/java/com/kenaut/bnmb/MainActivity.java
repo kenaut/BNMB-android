@@ -21,6 +21,8 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import org.json.JSONObject;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -46,6 +48,7 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private ValueCallback<Uri[]> fileChooserCallback;
+    private UpdateManager updateManager;
     /** 等待用户选择保存位置后再写入的备份内容 */
     private String pendingExportContent;
     private String cachedVideoPath;
@@ -133,6 +136,9 @@ public class MainActivity extends Activity {
         setContentView(webView);
         // 供数据管理页导出备份：WebView 内 blob 下载不会真正落盘
         webView.addJavascriptInterface(new NativeBridge(), "BNMBNative");
+        // 供设置页的版本更新使用
+        webView.addJavascriptInterface(new UpdateBridge(), "BNMBUpdater");
+        updateManager = new UpdateManager(this, updateListener);
         webView.loadUrl(START_URL);
     }
 
@@ -141,6 +147,45 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void saveTextFile(String fileName, String content) {
             runOnUiThread(() -> startExport(fileName, content));
+        }
+    }
+
+    /** 版本更新：检查与下载都在后台线程执行，结果通过 JS 回调返回 */
+    private class UpdateBridge {
+        @JavascriptInterface
+        public void checkUpdate() {
+            updateManager.check();
+        }
+
+        @JavascriptInterface
+        public void downloadUpdate(String url, String apkName, String sha256) {
+            updateManager.download(url, apkName, sha256);
+        }
+    }
+
+    private final UpdateManager.Listener updateListener = new UpdateManager.Listener() {
+        @Override
+        public void onCheckResult(JSONObject result) {
+            evaluateJs("window.__bnmbUpdateResult && window.__bnmbUpdateResult("
+                    + JSONObject.quote(result.toString()) + ")");
+        }
+
+        @Override
+        public void onProgress(int percent, String status) {
+            evaluateJs("window.__bnmbUpdateProgress && window.__bnmbUpdateProgress("
+                    + percent + "," + JSONObject.quote(status) + ")");
+        }
+
+        @Override
+        public void onDownloadResult(JSONObject result) {
+            evaluateJs("window.__bnmbDownloadResult && window.__bnmbDownloadResult("
+                    + JSONObject.quote(result.toString()) + ")");
+        }
+    };
+
+    private void evaluateJs(String script) {
+        if (webView != null) {
+            webView.evaluateJavascript(script, null);
         }
     }
 
@@ -319,6 +364,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (updateManager != null) {
+            updateManager.shutdown();
+        }
         if (webView != null) {
             webView.destroy();
             webView = null;

@@ -109,8 +109,8 @@ export function ModeSelectModal({ onChoose }: { onChoose: (mode: PracticeMode) =
   );
 }
 
-/** 设置页：切换练习模式（立即生效） */
-export default function SettingsScreen() {
+/** 设置页：切换练习模式（立即生效）+ 版本更新入口 */
+export default function SettingsScreen({ onOpenUpdate }: { onOpenUpdate: () => void }) {
   const [mode, setMode] = useState<PracticeMode | undefined>(
     () => loadProgress().practiceMode,
   );
@@ -121,19 +121,49 @@ export default function SettingsScreen() {
   };
 
   return (
-    <section
-      style={{
-        backgroundColor: "#fff",
-        border: "1px solid #d0d7de",
-        borderRadius: 8,
-        padding: 24,
-      }}
-    >
-      <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>练习模式</h2>
-      <p style={{ margin: "0 0 16px", fontSize: 14, color: "#57606a" }}>
-        点击即可切换，立即生效；历史成绩与形态掌握进度不受影响。
-      </p>
-      <ModeCards current={mode} onPick={pick} />
-    </section>
+    <div style={{ display: "grid", gap: 16 }}>
+      <section style={cardStyle}>
+        <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>练习模式</h2>
+        <p style={{ margin: "0 0 16px", fontSize: 14, color: "#57606a" }}>
+          点击即可切换，立即生效；历史成绩与形态掌握进度不受影响。
+        </p>
+        <ModeCards current={mode} onPick={pick} />
+      </section>
+
+      <section style={cardStyle}>
+        <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>版本更新</h2>
+        <p style={{ margin: "0 0 16px", fontSize: 14, color: "#57606a" }}>
+          检查 GitHub 与 Gitee 镜像上的最新发行版，发现新版本可直接下载安装。
+        </p>
+        <button onClick={onOpenUpdate} style={entryStyle}>
+          检查更新
+          <span aria-hidden="true" style={{ marginLeft: 8, color: "#8c959f" }}>
+            ›
+          </span>
+        </button>
+      </section>
+    </div>
   );
 }
+
+const cardStyle = {
+  backgroundColor: "#fff",
+  border: "1px solid #d0d7de",
+  borderRadius: 8,
+  padding: 24,
+} as const;
+
+const entryStyle = {
+  width: "100%",
+  minHeight: 48,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "10px 16px",
+  fontSize: 15,
+  borderRadius: 6,
+  border: "1px solid #d0d7de",
+  backgroundColor: "#fff",
+  color: "#1f2328",
+  cursor: "pointer",
+} as const;

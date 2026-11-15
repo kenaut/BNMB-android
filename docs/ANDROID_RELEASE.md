@@ -107,7 +107,7 @@ APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
 
 1. `applicationId` 永久保持 `com.kenaut.bnmb`
 2. 始终使用同一份 `bnmb-release.jks` 签名
-3. 每次发版 `versionCode` 必须严格递增（当前为 4）
+3. 每次发版 `versionCode` 必须严格递增（当前为 5）
 
 同时满足以上三点，新 APK 才能直接覆盖安装旧版本，并保留 `localStorage` 中的学习数据。
 
@@ -156,3 +156,30 @@ base64 -w0 android/keystore/bnmb-release.jks > keystore.b64
 - [ ] 核对证书 SHA-256、versionCode、非 debuggable
 - [ ] 在旧版本设备上实测覆盖安装，确认学习数据保留
 - [ ] 备份 JKS 与密码，确认未被 `git status` 跟踪
+- [ ] 在 GitHub 与 Gitee 同时发布正式版（不勾「预发行版」），附件含 APK，更新日志写入发行版说明
+- [ ] 用旧版本客户端实测能检查到新版本并完成安装
+
+## 10. 版本更新检查与镜像源
+
+客户端「设置 → 版本更新」会同时请求两个镜像源的发行版接口，地址硬编码在
+[`UpdateManager.java`](../android/app/src/main/java/com/kenaut/bnmb/UpdateManager.java)：
+
+| 源 | 接口 |
+| --- | --- |
+| GitHub | `https://api.github.com/repos/kenaut/BNMB-android/releases/latest` |
+| Gitee 镜像 | `https://gitee.com/api/v5/repos/kenaut/bnmb-augm/releases/latest` |
+
+两个接口返回的字段一致（`tag_name`、`body`、`assets[].browser_download_url`），
+客户端取版本号较高且可用的一个；页面会同时展示两源的连通状态。
+
+发布时必须满足以下约定，否则客户端检查不到更新：
+
+1. 发行版为正式版，**不能勾选「预发行版」**，否则 `latest` 接口不会返回它
+2. tag 使用 `v<versionName>`，例如 `v0.3.2`
+3. 附件命名匹配 `BNMB_android-v<数字版本>.apk`，客户端会排除名称含 `migrate` 的产物
+4. 更新日志写在发行版说明（`body`）中，客户端原样展示
+
+Gitee 仓库名与 GitHub 不同（`bnmb-augm`），若仓库改名需同步修改 `UpdateManager.GITEE_API`。
+
+下载完成后客户端会校验包名、签名证书与 `versionCode`：签名不一致或版本不高于当前版本时直接拒绝安装，
+因此 `-migrate` 包（debug 签名、versionCode 3）不会被误装。

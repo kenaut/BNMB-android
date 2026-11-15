@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 仅暴露缓存目录下的 updates/ 给系统安装器读取更新包 -->
+<paths>
+    <cache-path name="updates" path="updates/" />
+</paths>

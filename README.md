@@ -1,6 +1,6 @@
 # BNMB-android · 变にまび 安卓版
 
-日语动词活用训练应用「变にまび」的安卓版本。前端沿用 Web 版（React + Vite），外层是原生 WebView 壳，所有资源内置在 APK 中，完全离线运行，不申请联网权限。
+日语动词活用训练应用「变にまび」的安卓版本。前端沿用 Web 版（React + Vite），外层是原生 WebView 壳，所有学习资源内置在 APK 中；除「版本更新」检查外完全离线。
 
 ## 功能
 
@@ -9,6 +9,7 @@
 - 学习页：动词三分类教程、活用速查表、内置配套视频
 - 学习进度、连续天数等数据保存在本地 `localStorage`
 - 数据管理页支持 JSON 导出 / 导入（安卓端通过系统「保存到文件」选择器完成）
+- 设置页「版本更新」：GitHub 与 Gitee 双镜像源检查，展示更新日志并直接下载安装
 
 ## 目录结构
 
@@ -19,6 +20,7 @@
 | `android/` | Android 工程（Gradle + Java WebView 壳） |
 | `android/app/src/main/assets/www/` | Web 构建产物（由 `npm run build` 生成） |
 | `android/app/src/main/java/com/kenaut/bnmb/MainActivity.java` | WebView 容器、视频 Range 支持、文件导入 / 导出 |
+| `android/app/src/main/java/com/kenaut/bnmb/UpdateManager.java` | 版本检查、APK 下载与签名校验 |
 | `android/app/build.gradle.kts` | 版本号、SDK 与签名配置 |
 | `docs/ANDROID_RELEASE.md` | 正式签名、Release 构建与发布流程 |
 | `.github/workflows/android-release.yml` | GitHub Actions 自动构建 Release APK |
@@ -68,6 +70,7 @@ sdk.dir=/home/web/Android/Sdk
 
 | 版本 | versionCode | 说明 |
 | --- | --- | --- |
+| v0.3.2 | 5 | 新增「版本更新」：GitHub + Gitee 双镜像检查更新、展示更新日志、下载并安装 |
 | v0.3.1 | 4 | 切换正式签名（JKS，alias `bnmb`），新增原生备份导出；同签名的后续版本可直接覆盖升级 |
 | v0.3.0 | 3 | 同步网页版新功能：闯关/自由双模式、自选变形专练、选择题「同词干 × 错误词尾」干扰项，新增设置页 |
 | v0.2.0 | 2 | 同步网页版 597 词库与首页文案；学习页视频改为本地内置，WebView 支持视频 Range 拖动 |
@@ -83,3 +86,4 @@ npm run preview -- --port 4173        # 本地预览构建产物
 ## 已知限制
 
 - 0.3.0 → 0.3.1 因签名变更必须卸载重装，需先用迁移包导出备份（详见 `docs/ANDROID_RELEASE.md`）。
+- 首次通过「版本更新」安装时，需在系统设置中允许本应用「安装未知应用」。

@@ -33,8 +33,8 @@ android {
         applicationId = "com.kenaut.bnmb"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 5
+        versionName = "0.3.2"
     }
 
     signingConfigs {
@@ -68,4 +68,6 @@ android {
 dependencies {
     // 以 https 虚拟域名托管本地 assets，避免 file:// 下 ES Module/localStorage 的兼容问题
     implementation("androidx.webkit:webkit:1.12.1")
+    // FileProvider：把下载好的更新包以 content:// 交给系统安装器
+    implementation("androidx.core:core:1.13.1")
 }
