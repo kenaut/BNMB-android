@@ -51,11 +51,7 @@ export default function App() {
 
       {tab === "home" && <Training />}
       {tab === "learn" && <LearnScreen />}
-      {tab === "table" && (
-        <div className="table-scroll">
-          <VerbTable />
-        </div>
-      )}
+      {tab === "table" && <VerbTable />}
       {tab === "settings" &&
         (settingsPage === "update" ? (
           <UpdateScreen onBack={() => setSettingsPage("root")} />

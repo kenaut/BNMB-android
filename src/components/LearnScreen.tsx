@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import type { FormId, Verb, VerbType } from "../domain/types";
 import { ALL_FORMS, conjugate, FORM_LABELS, VERB_TYPE_LABELS } from "../domain/conjugate";
 import { verbs } from "../data/verbs";
@@ -268,65 +268,44 @@ export default function LearnScreen() {
       <section style={card}>
         <h2 style={{ marginTop: 0 }}>活用速查表</h2>
         <p style={muted}>
-          四类代表动词在全部 {ALL_FORMS.length} 种形态下的变化，示例由应用内的活用引擎实时计算。
+          四类代表动词（五段＝書く、一段＝食べる、サ变＝する、カ变＝来る）在全部{" "}
+          {ALL_FORMS.length} 种形态下的变化，示例由应用内的活用引擎实时计算。点击形态展开。
         </p>
-        <div className="table-scroll">
-          <table style={{ borderCollapse: "collapse", width: "100%", backgroundColor: "#fff" }}>
-            <thead>
-              <tr>
-                <Th>形态</Th>
-                {TYPE_ORDER.map((t) => (
-                  <Th key={t}>
-                    {VERB_TYPE_LABELS[t]}
-                    <RubyText kanji={DEMO[t].kanji} kana={DEMO[t].kana} />
-                  </Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {ALL_FORMS.map((f) => (
-                <tr key={f}>
-                  <Td>
-                    <strong>{FORM_LABELS[f]}</strong>
-                  </Td>
+        <div style={{ display: "grid", gap: 8 }}>
+          {FORM_DOCS.map((doc) => (
+            <details
+              key={doc.form}
+              className="form-doc"
+              style={{ border: "1px solid #eaeef2", borderRadius: 6, backgroundColor: "#fff" }}
+            >
+              <summary
+                style={{
+                  padding: "12px 14px",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {FORM_LABELS[doc.form]}
+              </summary>
+              <div style={{ padding: "0 14px 12px" }}>
+                <p style={{ ...muted, fontSize: 13, margin: "0 0 8px" }}>{doc.usage}</p>
+                <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}>
                   {TYPE_ORDER.map((t) => {
-                    const c = conjugate(DEMO[t], f);
+                    const r = doc.rules[t];
+                    const c = conjugate(DEMO[t], doc.form);
                     return (
-                      <Td key={t}>
+                      <li key={t} style={{ fontSize: 14 }}>
+                        <strong>{VERB_TYPE_LABELS[t]}</strong>：{r.rule}（
                         <RubyText kanji={c.kanji} kana={c.kana} />
-                      </Td>
+                        ）
+                        {r.note && <span style={{ color: "#9a6700" }}>　※ {r.note}</span>}
+                      </li>
                     );
                   })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section style={card}>
-        <h2 style={{ marginTop: 0 }}>各形态详解</h2>
-        <p style={muted}>括号内为演示动词的变形结果：五段＝書く、一段＝食べる、サ变＝する、カ变＝来る。</p>
-        <div style={{ display: "grid", gap: 12 }}>
-          {FORM_DOCS.map((doc) => (
-            <article key={doc.form} style={{ border: "1px solid #eaeef2", borderRadius: 6, padding: "12px 16px" }}>
-              <h3 style={{ margin: "0 0 4px", fontSize: 16 }}>{FORM_LABELS[doc.form]}</h3>
-              <p style={{ ...muted, fontSize: 14, margin: "0 0 8px" }}>{doc.usage}</p>
-              <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.9 }}>
-                {TYPE_ORDER.map((t) => {
-                  const r = doc.rules[t];
-                  const c = conjugate(DEMO[t], doc.form);
-                  return (
-                    <li key={t} style={{ fontSize: 14 }}>
-                      <strong>{VERB_TYPE_LABELS[t]}</strong>：{r.rule}（
-                      <RubyText kanji={c.kanji} kana={c.kana} />
-                      ）
-                      {r.note && <span style={{ color: "#9a6700" }}>　※ {r.note}</span>}
-                    </li>
-                  );
-                })}
-              </ul>
-            </article>
+                </ul>
+              </div>
+            </details>
           ))}
         </div>
       </section>
@@ -342,19 +321,5 @@ export default function LearnScreen() {
         </ul>
       </section>
     </div>
-  );
-}
-
-function Th({ children }: { children: ReactNode }) {
-  return (
-    <th style={{ borderBottom: "2px solid #ccc", textAlign: "left", padding: "6px 10px", whiteSpace: "nowrap" }}>
-      {children}
-    </th>
-  );
-}
-
-function Td({ children }: { children: ReactNode }) {
-  return (
-    <td style={{ borderBottom: "1px solid #eee", padding: "6px 10px", whiteSpace: "nowrap" }}>{children}</td>
   );
 }

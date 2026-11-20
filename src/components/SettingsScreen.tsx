@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { loadProgress, saveProgress } from "../storage/persistence";
-import type { PracticeMode } from "../storage/progress";
+import type { PracticeMode, Preferences } from "../storage/progress";
 
 const MODE_INFO: Record<PracticeMode, { title: string; desc: string }> = {
   adventure: {
@@ -12,6 +12,25 @@ const MODE_INFO: Record<PracticeMode, { title: string; desc: string }> = {
     desc: "全部 11 种活用形态直接开放，随意练习，适合已掌握大部分形态的学习者。",
   },
 };
+
+/** 做题偏好开关定义 */
+const PREF_ITEMS: Array<{ key: keyof Preferences; title: string; desc: string }> = [
+  {
+    key: "showFurigana",
+    title: "假名显示",
+    desc: "在汉字上方标注振假名；关闭后只显示汉字，更接近真实考试。",
+  },
+  {
+    key: "showFormLabel",
+    title: "形态显示",
+    desc: "显示本题考查的目标形态徽章（如「て形」）。",
+  },
+  {
+    key: "showVerbType",
+    title: "动词属性",
+    desc: "显示动词类别（五段 / 一段 / サ变 / カ变）。",
+  },
+];
 
 /** 把练习模式写入存档（存储不可用时调用方仍会更新本地状态） */
 function persistMode(mode: PracticeMode) {
@@ -109,20 +128,34 @@ export function ModeSelectModal({ onChoose }: { onChoose: (mode: PracticeMode) =
   );
 }
 
-/** 设置页：切换练习模式（立即生效）+ 版本更新入口 */
+/** 设置页：切换练习模式 + 做题偏好（立即生效）+ 版本更新入口 */
 export default function SettingsScreen({ onOpenUpdate }: { onOpenUpdate: () => void }) {
   const [mode, setMode] = useState<PracticeMode | undefined>(
     () => loadProgress().practiceMode,
   );
+  const [prefs, setPrefs] = useState<Preferences>(() => loadProgress().preferences);
 
   const pick = (m: PracticeMode) => {
     persistMode(m);
     setMode(m);
   };
 
+  const togglePref = (key: keyof Preferences, value: boolean) => {
+    const next = { ...prefs, [key]: value };
+    saveProgress({ ...loadProgress(), preferences: next });
+    setPrefs(next);
+  };
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <section style={cardStyle}>
+      <section
+        style={{
+          backgroundColor: "#fff",
+          border: "1px solid #d0d7de",
+          borderRadius: 8,
+          padding: 24,
+        }}
+      >
         <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>练习模式</h2>
         <p style={{ margin: "0 0 16px", fontSize: 14, color: "#57606a" }}>
           点击即可切换，立即生效；历史成绩与形态掌握进度不受影响。
@@ -130,40 +163,79 @@ export default function SettingsScreen({ onOpenUpdate }: { onOpenUpdate: () => v
         <ModeCards current={mode} onPick={pick} />
       </section>
 
-      <section style={cardStyle}>
+      <section
+        style={{
+          backgroundColor: "#fff",
+          border: "1px solid #d0d7de",
+          borderRadius: 8,
+          padding: 24,
+        }}
+      >
+        <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>做题偏好</h2>
+        <p style={{ margin: "0 0 8px", fontSize: 14, color: "#57606a" }}>
+          控制题目界面显示的提示，默认全部开启；修改后从主页重新进入练习即生效。
+        </p>
+        {PREF_ITEMS.map((item) => (
+          <label
+            key={item.key}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12,
+              padding: "12px 0",
+              borderTop: "1px solid #eaeef2",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={prefs[item.key]}
+              onChange={(e) => togglePref(item.key, e.target.checked)}
+              style={{
+                marginTop: 3,
+                width: 18,
+                height: 18,
+                accentColor: "#0969da",
+                cursor: "pointer",
+              }}
+            />
+            <span>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>{item.title}</span>
+              <span style={{ display: "block", fontSize: 13, color: "#57606a", marginTop: 2 }}>
+                {item.desc}
+              </span>
+            </span>
+          </label>
+        ))}
+      </section>
+
+      <section
+        style={{
+          backgroundColor: "#fff",
+          border: "1px solid #d0d7de",
+          borderRadius: 8,
+          padding: 24,
+        }}
+      >
         <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>版本更新</h2>
         <p style={{ margin: "0 0 16px", fontSize: 14, color: "#57606a" }}>
           检查 GitHub 与 Gitee 镜像上的最新发行版，发现新版本可直接下载安装。
         </p>
-        <button onClick={onOpenUpdate} style={entryStyle}>
+        <button
+          onClick={onOpenUpdate}
+          style={{
+            cursor: "pointer",
+            backgroundColor: "#fff",
+            border: "1px solid #d0d7de",
+            borderRadius: 6,
+            padding: "10px 18px",
+            fontSize: 15,
+            color: "#1f2328",
+          }}
+        >
           检查更新
-          <span aria-hidden="true" style={{ marginLeft: 8, color: "#8c959f" }}>
-            ›
-          </span>
         </button>
       </section>
     </div>
   );
 }
-
-const cardStyle = {
-  backgroundColor: "#fff",
-  border: "1px solid #d0d7de",
-  borderRadius: 8,
-  padding: 24,
-} as const;
-
-const entryStyle = {
-  width: "100%",
-  minHeight: 48,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "10px 16px",
-  fontSize: 15,
-  borderRadius: 6,
-  border: "1px solid #d0d7de",
-  backgroundColor: "#fff",
-  color: "#1f2328",
-  cursor: "pointer",
-} as const;

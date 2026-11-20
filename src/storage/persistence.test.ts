@@ -113,6 +113,47 @@ describe("practiceMode 持久化", () => {
   });
 });
 
+describe("preferences 持久化", () => {
+  it("默认全部开启", () => {
+    const s = fakeStorage();
+    expect(loadProgress(s).preferences).toEqual({
+      showFurigana: true,
+      showFormLabel: true,
+      showVerbType: true,
+    });
+  });
+
+  it("关闭后保存读回一致", () => {
+    const s = fakeStorage();
+    saveProgress(
+      {
+        ...sampleProgress(),
+        preferences: { showFurigana: false, showFormLabel: true, showVerbType: false },
+      },
+      s,
+    );
+    expect(loadProgress(s).preferences).toEqual({
+      showFurigana: false,
+      showFormLabel: true,
+      showVerbType: false,
+    });
+  });
+
+  it("缺字段或非布尔值时逐项回退默认（旧存档兼容）", () => {
+    const s = fakeStorage({
+      [STORAGE_KEY]: JSON.stringify({
+        version: PROGRESS_VERSION,
+        preferences: { showFurigana: false, showFormLabel: "yes", showVerbType: null },
+      }),
+    });
+    expect(loadProgress(s).preferences).toEqual({
+      showFurigana: false,
+      showFormLabel: true,
+      showVerbType: true,
+    });
+  });
+});
+
 describe("parseImport", () => {
   it("合法备份导入成功并补全字段", () => {
     const r = parseImport(JSON.stringify({ version: PROGRESS_VERSION, totalSessions: 5 }));

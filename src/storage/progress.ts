@@ -37,6 +37,22 @@ export interface Profile {
   nickname: string;
 }
 
+/** 做题偏好：控制题目界面显示的提示信息，默认全部开启 */
+export interface Preferences {
+  /** 汉字上方是否显示振假名 */
+  showFurigana: boolean;
+  /** 是否显示目标形态徽章（如「て形」） */
+  showFormLabel: boolean;
+  /** 是否显示动词属性（五段 / 一段 / サ变 / カ变） */
+  showVerbType: boolean;
+}
+
+export const DEFAULT_PREFERENCES: Preferences = {
+  showFurigana: true,
+  showFormLabel: true,
+  showVerbType: true,
+};
+
 /**
  * 练习模式：
  * - adventure：闯关模式，形态按批解锁（初始 4 形，掌握后解锁下一批）
@@ -47,6 +63,8 @@ export type PracticeMode = "adventure" | "free";
 export interface UserProgress {
   version: number;
   profile: Profile;
+  /** 做题偏好 */
+  preferences: Preferences;
   totalQuestions: number;
   correctAnswers: number;
   totalSessions: number;
@@ -72,6 +90,7 @@ export function createDefaultProgress(): UserProgress {
   return {
     version: PROGRESS_VERSION,
     profile: { nickname: "学习者" },
+    preferences: { ...DEFAULT_PREFERENCES },
     totalQuestions: 0,
     correctAnswers: 0,
     totalSessions: 0,
@@ -125,6 +144,7 @@ export function sanitizeProgress(raw: unknown): UserProgress | null {
   if (raw.version !== PROGRESS_VERSION) return null;
 
   const streakRaw = isRecord(raw.streak) ? raw.streak : {};
+  const prefsRaw = isRecord(raw.preferences) ? raw.preferences : {};
   const recentResults = Array.isArray(raw.recentResults)
     ? raw.recentResults.filter(isRecentResult).slice(0, MAX_RECENT_RESULTS)
     : [];
@@ -136,6 +156,20 @@ export function sanitizeProgress(raw: unknown): UserProgress | null {
         isRecord(raw.profile) && typeof raw.profile.nickname === "string"
           ? raw.profile.nickname.slice(0, 24)
           : "学习者",
+    },
+    preferences: {
+      showFurigana:
+        typeof prefsRaw.showFurigana === "boolean"
+          ? prefsRaw.showFurigana
+          : DEFAULT_PREFERENCES.showFurigana,
+      showFormLabel:
+        typeof prefsRaw.showFormLabel === "boolean"
+          ? prefsRaw.showFormLabel
+          : DEFAULT_PREFERENCES.showFormLabel,
+      showVerbType:
+        typeof prefsRaw.showVerbType === "boolean"
+          ? prefsRaw.showVerbType
+          : DEFAULT_PREFERENCES.showVerbType,
     },
     totalQuestions: num(raw.totalQuestions),
     correctAnswers: num(raw.correctAnswers),

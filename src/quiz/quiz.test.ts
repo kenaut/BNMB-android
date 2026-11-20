@@ -8,8 +8,8 @@ import {
   createChoiceOptions,
   createQuestion,
   createQuestions,
-  createReverseOptions,
   sameStemWrongTails,
+  wrongTypeForms,
 } from "./quiz";
 
 describe("createQuestion", () => {
@@ -101,6 +101,37 @@ describe("选择题", () => {
     expect(sameStemWrongTails(aru, "potential").length).toBeGreaterThan(0);
   });
 
+  it("一段动词正向选择题包含「当五段活用」陷阱（見る→見って）", () => {
+    const miru = verbs.find((v) => v.kana === "みる")!;
+    const options = createChoiceOptions(miru, "te", verbs, () => 0.5);
+    expect(options).toContainEqual({ kanji: "見って", kana: "みって" });
+  });
+
+  it("五段动词正向选择题包含「当一段活用」陷阱（書く→書て）", () => {
+    const kaku = verbs.find((v) => v.id === "kaku")!;
+    const options = createChoiceOptions(kaku, "te", verbs, () => 0.5);
+    expect(options).toContainEqual({ kanji: "書て", kana: "かて" });
+  });
+
+  it("可能形的一段落陷阱即「ら抜き」错误（食べれる）", () => {
+    const taberu = verbs.find((v) => v.kana === "たべる")!;
+    expect(wrongTypeForms(taberu, "potential")).toEqual([
+      { kanji: "食べれる", kana: "たべれる" },
+    ]);
+  });
+
+  it("全库「错误类型活用」陷阱的振假名均可对齐", () => {
+    for (const v of verbs) {
+      for (const form of CONJUGATABLE_FORMS) {
+        for (const t of wrongTypeForms(v, form)) {
+          const segs = formToFurigana(t);
+          expect(segs.map((s) => s.text).join("")).toBe(t.kanji);
+          expect(segs.map((s) => s.reading ?? s.text).join("")).toBe(t.kana);
+        }
+      }
+    }
+  });
+
   it("全库陷阱选项的汉字/假名均可对齐振假名（选项经 RubyText 渲染，不容报错）", () => {
     for (const v of verbs) {
       for (const form of CONJUGATABLE_FORMS) {
@@ -120,9 +151,17 @@ describe("选择题", () => {
     expect(checkChoice({ kanji: "書いて", kana: "かいた" }, answer)).toBe(false);
   });
 
-  it("createQuestions：choiceRatio=1 全为选择题，=0 全为填空，且组合仍不重复", () => {
+  it("createQuestions：choiceRatio=1 时正向全为选择题、逆向全为填空；=0 全为填空", () => {
     const allChoice = createQuestions(10, verbs, undefined, Math.random, 1);
-    expect(allChoice.every((q) => q.kind === "choice" && q.options?.length === 4)).toBe(true);
+    for (const q of allChoice) {
+      if (q.direction === "reverse") {
+        expect(q.kind).toBe("input");
+        expect(q.options).toBeUndefined();
+      } else {
+        expect(q.kind).toBe("choice");
+        expect(q.options).toHaveLength(4);
+      }
+    }
 
     const allInput = createQuestions(10, verbs, undefined, Math.random, 0);
     expect(allInput.every((q) => q.kind === "input" && q.options === undefined)).toBe(true);
@@ -150,21 +189,12 @@ describe("逆向题（活用形 → 辞书形）", () => {
     expect(q.answer).toEqual({ kanji: "来る", kana: "くる" });
   });
 
-  it("逆向选择题：4 个选项都是辞书形且含正确答案", () => {
+  it("逆向题只出填空题（题面已显示汉字，4 选 1 会直接送分）", () => {
     for (let i = 0; i < 30; i++) {
       const q = createQuestion(verbs, undefined, Math.random, "choice", "reverse");
-      expect(q.options).toHaveLength(4);
-      const keys = q.options!.map((o) => `${o.kanji}|${o.kana}`);
-      expect(new Set(keys).size).toBe(4);
-      expect(q.options).toContainEqual({ kanji: q.verb.kanji, kana: q.verb.kana });
+      expect(q.kind).toBe("input");
+      expect(q.options).toBeUndefined();
     }
-  });
-
-  it("createReverseOptions 不重复且包含正确辞书形", () => {
-    const kaku = verbs.find((v) => v.id === "kaku")!;
-    const options = createReverseOptions(kaku, verbs, () => 0.5);
-    expect(options).toHaveLength(4);
-    expect(options).toContainEqual({ kanji: "書く", kana: "かく" });
   });
 
   it("dictionary 不能作为出题形态", () => {

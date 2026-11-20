@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FORM_LABELS, VERB_TYPE_LABELS } from "../domain/conjugate";
 import type { Question } from "../quiz/quiz";
 import { checkAnswer, checkChoice } from "../quiz/quiz";
+import { loadProgress } from "../storage/persistence";
 import RubyText from "./RubyText";
 import { useImeEnter } from "./useImeEnter";
 
@@ -25,6 +26,8 @@ export default function QuestionCard({
   const [input, setInput] = useState("");
   const [result, setResult] = useState<boolean | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
+  // 做题偏好：组件挂载时读取一次（切换设置后从主页重新进入即生效）
+  const [prefs] = useState(() => loadProgress().preferences);
   const continueRef = useRef<HTMLButtonElement>(null);
   const isChoice = question.kind === "choice";
   const isReverse = question.direction === "reverse";
@@ -63,20 +66,22 @@ export default function QuestionCard({
         padding: 24,
       }}
     >
-      <span
-        style={{
-          display: "inline-block",
-          backgroundColor: isReverse ? "#fff8c5" : "#ddf4ff",
-          color: isReverse ? "#9a6700" : "#0969da",
-          borderRadius: 12,
-          padding: "2px 12px",
-          fontSize: 14,
-          fontWeight: 600,
-        }}
-      >
-        {targetLabel}
-      </span>
-      {isReverse && (
+      {prefs.showFormLabel && (
+        <span
+          style={{
+            display: "inline-block",
+            backgroundColor: isReverse ? "#fff8c5" : "#ddf4ff",
+            color: isReverse ? "#9a6700" : "#0969da",
+            borderRadius: 12,
+            padding: "2px 12px",
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
+          {targetLabel}
+        </span>
+      )}
+      {prefs.showFormLabel && isReverse && (
         <span
           style={{
             display: "inline-block",
@@ -94,10 +99,15 @@ export default function QuestionCard({
       )}
 
       <h2 style={{ margin: "16px 0 4px", fontSize: 40 }}>
-        <RubyText kanji={question.given.kanji} kana={question.given.kana} />
+        <RubyText
+          kanji={question.given.kanji}
+          kana={question.given.kana}
+          showReading={prefs.showFurigana}
+        />
       </h2>
       <p style={{ margin: "0 0 16px", color: "#57606a" }}>
-        {question.verb.meaning} · {VERB_TYPE_LABELS[question.verb.type]}
+        {question.verb.meaning}
+        {prefs.showVerbType && ` · ${VERB_TYPE_LABELS[question.verb.type]}`}
       </p>
 
       <p style={{ margin: "0 0 8px" }}>
@@ -149,7 +159,7 @@ export default function QuestionCard({
                   opacity: judged && !isAnswer && i !== selected ? 0.55 : 1,
                 }}
               >
-                <RubyText kanji={opt.kanji} kana={opt.kana} />
+                <RubyText kanji={opt.kanji} kana={opt.kana} showReading={prefs.showFurigana} />
               </button>
             );
           })}
@@ -214,7 +224,11 @@ export default function QuestionCard({
             <>
               正确答案：
               <b>
-                <RubyText kanji={question.answer.kanji} kana={question.answer.kana} />
+                <RubyText
+                  kanji={question.answer.kanji}
+                  kana={question.answer.kana}
+                  showReading={prefs.showFurigana}
+                />
               </b>
             </>
           )}

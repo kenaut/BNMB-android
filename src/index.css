@@ -102,6 +102,30 @@ button {
   -webkit-overflow-scrolling: touch;
 }
 
+/* 学习页「活用速查表」：竖屏折叠列表，替代需要横滑的多列表格 */
+.form-doc > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+}
+
+.form-doc > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 折叠指示：展开时箭头翻转 */
+.form-doc > summary::after {
+  content: "▾";
+  color: #57606a;
+  transition: transform 0.15s ease;
+}
+
+.form-doc[open] > summary::after {
+  transform: rotate(180deg);
+}
+
 /* 振假名：汉字上方的小字注音 */
 ruby {
   ruby-position: over;
