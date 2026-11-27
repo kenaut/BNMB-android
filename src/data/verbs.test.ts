@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { conjugate, ALL_FORMS } from "../domain/conjugate";
-import { verbs } from "./verbs";
+import { filterVerbsByLevels, VERB_LEVELS, verbs } from "./verbs";
 
 describe("verbs.json 数据完整性", () => {
   it("id 唯一", () => {
@@ -57,5 +57,33 @@ describe("verbs.json 数据完整性", () => {
       verbs.filter((v) => v.type === "godan").map((v) => v.kana.slice(-1)),
     );
     expect(endings).toEqual(new Set(["う", "く", "ぐ", "す", "つ", "ぬ", "ぶ", "む", "る"]));
+  });
+});
+
+describe("按 JLPT 级别筛选", () => {
+  it("每个级别都有动词", () => {
+    for (const level of VERB_LEVELS) {
+      expect(filterVerbsByLevels([level]).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("单选一级只返回该级别", () => {
+    const n5 = filterVerbsByLevels(["N5"]);
+    expect(n5.length).toBeGreaterThan(0);
+    expect(n5.every((v) => v.level === "N5")).toBe(true);
+  });
+
+  it("多选返回所选级别的并集", () => {
+    const picked = filterVerbsByLevels(["N5", "N1"]);
+    expect(picked.length).toBe(
+      filterVerbsByLevels(["N5"]).length + filterVerbsByLevels(["N1"]).length,
+    );
+    expect(picked.every((v) => v.level === "N5" || v.level === "N1")).toBe(true);
+  });
+
+  it("不传 / 空数组 / 全部级别都返回完整词库", () => {
+    expect(filterVerbsByLevels()).toBe(verbs);
+    expect(filterVerbsByLevels([])).toBe(verbs);
+    expect(filterVerbsByLevels([...VERB_LEVELS])).toBe(verbs);
   });
 });

@@ -28,6 +28,9 @@ export type FormId =
   | "causative" // 使役形（書かせる）
   | "causative_passive"; // 使役受身形（書かせられる）
 
+/** JLPT 级别 */
+export type VerbLevel = "N5" | "N4" | "N3" | "N2" | "N1";
+
 /** verbs.json 中单个动词的数据结构 */
 export interface Verb {
   /** 唯一 ID（罗马音），如 "taberu"、"benkyou-suru" */
@@ -40,8 +43,8 @@ export interface Verb {
   meaning: string;
   /** 动词类别（判别规则见引擎注释，如 帰る/走る/ある 是五段而非一段） */
   type: VerbType;
-  /** JLPT 级别（可选，便于以后按级别出题） */
-  level?: "N5" | "N4" | "N3" | "N2" | "N1";
+  /** JLPT 级别（可选，用于按级别出题） */
+  level?: VerbLevel;
 }
 
 /** 一个活用结果：同时给出汉字书写与假名读音 */

@@ -67,3 +67,21 @@ export function unmasteredInCurrentBatch(progress: UserProgress): number {
 export function getAvailableForms(progress: UserProgress): ConjugatableFormId[] {
   return progress.practiceMode === "free" ? [...CONJUGATABLE_FORMS] : getUnlockedForms(progress);
 }
+
+/**
+ * 出题实际使用的形态范围：
+ * - 未自选：当前模式的可用形态（闯关=已解锁 / 自由=全部）
+ * - 自选：与当前模式的可用形态取交集（闯关模式下即便自选里有未解锁形态也会被剔除）
+ * - 若交集为空（例如存档里残留了未解锁形态），退回可用形态，保证能正常出题
+ *
+ * 正向题与逆向题共用这一范围，避免「正向不出、逆向却出现未解锁形态」。
+ */
+export function resolveQuestionForms(
+  progress: UserProgress,
+  selected?: readonly ConjugatableFormId[],
+): ConjugatableFormId[] {
+  const allowed = getAvailableForms(progress);
+  if (!selected || selected.length === 0) return allowed;
+  const filtered = allowed.filter((f) => selected.includes(f));
+  return filtered.length > 0 ? filtered : allowed;
+}

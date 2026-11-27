@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { ConjugatableFormId } from "../domain/conjugate";
+import type { VerbLevel } from "../domain/types";
+import { VERB_LEVELS } from "../data/verbs";
 import HomeScreen from "../components/HomeScreen";
 import ProfileCard from "../components/ProfileCard";
 import Quiz from "../components/Quiz";
@@ -15,11 +17,20 @@ import { useTrainingSession } from "./useTrainingSession";
  */
 export default function Training() {
   const session = useTrainingSession();
-  // 自由练习的形态范围：null = 关闭；[] = 按练习模式默认；数组 = 自选变形
-  const [quizForms, setQuizForms] = useState<ConjugatableFormId[] | null>(null);
+  // 自由练习的范围：null = 关闭；forms 为空 = 按练习模式默认；levels 为空 = 全部级别
+  const [freeScope, setFreeScope] = useState<{
+    forms: ConjugatableFormId[];
+    levels: VerbLevel[];
+  } | null>(null);
 
-  if (quizForms !== null) {
-    return <Quiz forms={quizForms} onBack={() => setQuizForms(null)} />;
+  if (freeScope !== null) {
+    return (
+      <Quiz
+        forms={freeScope.forms}
+        levels={freeScope.levels}
+        onBack={() => setFreeScope(null)}
+      />
+    );
   }
 
   switch (session.state.phase) {
@@ -49,9 +60,9 @@ export default function Training() {
           <HomeScreen
             total={session.state.total}
             onStart={() => session.start()}
-            onFreePractice={() => setQuizForms([])}
-            onCustomStart={(forms) => session.start(session.state.total, forms)}
-            onCustomPractice={(forms) => setQuizForms(forms)}
+            onFreePractice={() => setFreeScope({ forms: [], levels: [...VERB_LEVELS] })}
+            onCustomStart={(forms, levels) => session.start(session.state.total, forms, levels)}
+            onCustomPractice={(forms, levels) => setFreeScope({ forms, levels })}
           />
           <StatsScreen />
         </div>

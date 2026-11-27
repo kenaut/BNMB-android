@@ -6,6 +6,7 @@ import SettingsScreen, { ModeSelectModal } from "./components/SettingsScreen";
 import UpdateScreen from "./components/UpdateScreen";
 import { loadProgress, saveProgress } from "./storage/persistence";
 import type { PracticeMode } from "./storage/progress";
+import { useTheme } from "./theme/useTheme";
 
 type Tab = "home" | "learn" | "table" | "settings";
 
@@ -13,10 +14,11 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("home");
   // 设置页内部的二级页面：版本更新
   const [settingsPage, setSettingsPage] = useState<"root" | "update">("root");
-  // undefined = 用户尚未选择练习模式 → 首次打开弹窗询问
+  // undefined = 用户尚未选择练习模式 → 开始练习时弹窗询问
   const [mode, setMode] = useState<PracticeMode | undefined>(
     () => loadProgress().practiceMode,
   );
+  const theme = useTheme();
 
   const chooseMode = (m: PracticeMode) => {
     saveProgress({ ...loadProgress(), practiceMode: m });
@@ -49,17 +51,23 @@ export default function App() {
         </TabButton>
       </nav>
 
-      {tab === "home" && <Training />}
-      {tab === "learn" && <LearnScreen />}
-      {tab === "table" && <VerbTable />}
-      {tab === "settings" &&
-        (settingsPage === "update" ? (
-          <UpdateScreen onBack={() => setSettingsPage("root")} />
-        ) : (
-          <SettingsScreen onOpenUpdate={() => setSettingsPage("update")} />
-        ))}
+      <div key={tab} className="fade-slide-in">
+        {tab === "home" && <Training />}
+        {tab === "learn" && <LearnScreen />}
+        {tab === "table" && <VerbTable />}
+        {tab === "settings" &&
+          (settingsPage === "update" ? (
+            <UpdateScreen onBack={() => setSettingsPage("root")} />
+          ) : (
+            <SettingsScreen
+              themeMode={theme.mode}
+              onThemeChange={theme.changeTheme}
+              onOpenUpdate={() => setSettingsPage("update")}
+            />
+          ))}
+      </div>
 
-      {mode === undefined && <ModeSelectModal onChoose={chooseMode} />}
+      {tab === "home" && mode === undefined && <ModeSelectModal onChoose={chooseMode} />}
     </main>
   );
 }

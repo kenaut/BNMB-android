@@ -202,6 +202,18 @@ describe("逆向题（活用形 → 辞书形）", () => {
   });
 });
 
+describe("出题形态范围", () => {
+  it("逆向题只在给定形态范围内出题（不会出现未解锁形态）", () => {
+    const scope = CONJUGATABLE_FORMS.slice(0, 4); // 模拟闯关模式首批 4 形
+    for (let i = 0; i < 20; i++) {
+      const questions = createQuestions(10, verbs, scope);
+      for (const q of questions) {
+        expect(scope).toContain(q.form);
+      }
+    }
+  });
+});
+
 describe("createQuestions（回合内不重复）", () => {
   it("10 题的 动词×形态×方向 组合两两不同，且答案与引擎一致", () => {
     const questions = createQuestions(10);

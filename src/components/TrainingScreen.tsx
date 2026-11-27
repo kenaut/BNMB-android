@@ -43,14 +43,14 @@ export default function TrainingScreen({
             第 {current} / {state.total} 题
           </span>
           <span style={{ fontVariantNumeric: "tabular-nums" }}>⏱ {formatClock(elapsedMs)}</span>
-          <span style={{ color: "#1a7f37" }}>✓ {state.correct} 题正确</span>
+          <span style={{ color: "var(--success)" }}>✓ {state.correct} 题正确</span>
         </div>
         <button
           onClick={onQuit}
           style={{
             border: "none",
             background: "none",
-            color: "#57606a",
+            color: "var(--text-secondary)",
             cursor: "pointer",
             fontSize: 14,
             padding: 4,
@@ -60,12 +60,12 @@ export default function TrainingScreen({
         </button>
       </div>
 
-      <div style={{ height: 8, backgroundColor: "#eaeef2", borderRadius: 4, overflow: "hidden", marginBottom: 16 }}>
+      <div style={{ height: 8, backgroundColor: "var(--border-muted)", borderRadius: 4, overflow: "hidden", marginBottom: 16 }}>
         <div
           style={{
             height: "100%",
             width: `${progress}%`,
-            backgroundColor: "#1f883d",
+            backgroundColor: "var(--success-strong)",
             transition: "width 0.2s ease",
           }}
         />
@@ -79,7 +79,7 @@ export default function TrainingScreen({
         continueLabel={isLast ? "查看结果" : "下一题"}
       />
 
-      <p style={{ color: "#8c959f", fontSize: 13, textAlign: "center", marginTop: 10 }}>
+      <p style={{ color: "var(--text-tertiary)", fontSize: 13, textAlign: "center", marginTop: 10 }}>
         正确率 {Math.round(getAccuracy(state) * 100)}%
       </p>
     </div>

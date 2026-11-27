@@ -33,7 +33,7 @@ export default function StatsScreen() {
     return (
       <>
         <section style={cardStyle}>
-          <p style={{ color: "#57606a", textAlign: "center", margin: 0 }}>
+          <p style={{ color: "var(--text-secondary)", textAlign: "center", margin: 0 }}>
             还没有训练记录。完成一次训练回合后，这里会显示正确率走势、弱项分析和历史成绩。
           </p>
         </section>
@@ -90,15 +90,15 @@ export default function StatsScreen() {
                 >
                   <span style={{ fontSize: 18 }}>
                     {verb ? <RubyText kanji={verb.kanji} kana={verb.kana} /> : s.key}
-                    <span style={{ color: "#57606a", fontSize: 13, marginLeft: 8 }}>
+                    <span style={{ color: "var(--text-secondary)", fontSize: 13, marginLeft: 8 }}>
                       {verb?.meaning ?? ""}
                     </span>
                   </span>
                   <span style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-                    <b style={{ color: s.accuracy < 0.5 ? "#cf222e" : "#bf8700" }}>
+                    <b style={{ color: s.accuracy < 0.5 ? "var(--danger)" : "var(--warning)" }}>
                       {formatPercent(s.accuracy)}
                     </b>
-                    <span style={{ color: "#8c959f", fontSize: 13 }}>
+                    <span style={{ color: "var(--text-tertiary)", fontSize: 13 }}>
                       （{s.correct}/{s.attempts}）
                     </span>
                   </span>
@@ -121,16 +121,16 @@ export default function StatsScreen() {
                 gap: 8,
                 flexWrap: "wrap",
                 padding: "6px 0",
-                borderBottom: "1px solid #eaeef2",
+                borderBottom: "1px solid var(--border-muted)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              <span style={{ color: "#57606a" }}>{r.date}</span>
+              <span style={{ color: "var(--text-secondary)" }}>{r.date}</span>
               <span>
-                <b style={{ color: r.accuracy >= 0.8 ? "#1a7f37" : r.accuracy >= 0.5 ? "#bf8700" : "#cf222e" }}>
+                <b style={{ color: r.accuracy >= 0.8 ? "var(--success)" : r.accuracy >= 0.5 ? "var(--warning)" : "var(--danger)" }}>
                   {formatPercent(r.accuracy)}
                 </b>
-                <span style={{ color: "#57606a", marginLeft: 8 }}>
+                <span style={{ color: "var(--text-secondary)", marginLeft: 8 }}>
                   {r.correctAnswers}/{r.totalQuestions} 题 · {formatClock(r.elapsedMs)}
                 </span>
               </span>
@@ -145,8 +145,8 @@ export default function StatsScreen() {
 }
 
 const cardStyle: React.CSSProperties = {
-  backgroundColor: "#fff",
-  border: "1px solid #d0d7de",
+  backgroundColor: "var(--surface)",
+  border: "1px solid var(--border)",
   borderRadius: 8,
   padding: 20,
 };
@@ -161,11 +161,11 @@ const statGridStyle: React.CSSProperties = {
 
 function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div style={{ border: "1px solid #d0d7de", borderRadius: 8, padding: "12px 8px", backgroundColor: "#f6f8fa", textAlign: "center" }}>
+    <div style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "12px 8px", backgroundColor: "var(--surface-subtle)", textAlign: "center" }}>
       <div style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{value}</div>
-      <div style={{ color: "#57606a", fontSize: 13, marginTop: 4 }}>
+      <div style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 4 }}>
         {label}
-        {sub && <div style={{ fontSize: 12, color: "#8c959f" }}>{sub}</div>}
+        {sub && <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{sub}</div>}
       </div>
     </div>
   );
@@ -183,16 +183,16 @@ function AccuracyBar({
   accuracy: number;
 }) {
   const percent = Math.round(accuracy * 100);
-  const color = accuracy >= 0.8 ? "#1f883d" : accuracy >= 0.5 ? "#bf8700" : "#cf222e";
+  const color = accuracy >= 0.8 ? "var(--success-strong)" : accuracy >= 0.5 ? "var(--warning)" : "var(--danger)";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{ width: 56, flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 10, backgroundColor: "#eaeef2", borderRadius: 5, overflow: "hidden" }}>
+      <div style={{ flex: 1, height: 10, backgroundColor: "var(--border-muted)", borderRadius: 5, overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${percent}%`, backgroundColor: color }} />
       </div>
       <span style={{ width: 96, flexShrink: 0, textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: 14 }}>
         <b style={{ color }}>{percent}%</b>
-        <span style={{ color: "#8c959f" }}>（{correct}/{attempts}）</span>
+        <span style={{ color: "var(--text-tertiary)" }}>（{correct}/{attempts}）</span>
       </span>
     </div>
   );

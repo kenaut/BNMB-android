@@ -87,13 +87,13 @@ export default function DataSettings({ onChanged }: { onChanged: () => void }) {
   return (
     <section style={cardStyle}>
       <h3 style={sectionTitleStyle}>数据管理</h3>
-      <p style={{ margin: "0 0 12px", color: "#57606a", fontSize: 13 }}>
+      <p style={{ margin: "0 0 12px", color: "var(--text-secondary)", fontSize: 13 }}>
         数据仅保存在本设备浏览器中（localStorage），不会上传到任何服务器。
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={handleExport} style={btnStyle}>导出数据</button>
         <button onClick={() => fileRef.current?.click()} style={btnStyle}>导入数据</button>
-        <button onClick={handleClear} style={{ ...btnStyle, color: "#cf222e" }}>清除数据</button>
+        <button onClick={handleClear} style={{ ...btnStyle, color: "var(--danger)" }}>清除数据</button>
       </div>
       <input
         ref={fileRef}
@@ -115,8 +115,8 @@ export default function DataSettings({ onChanged }: { onChanged: () => void }) {
             borderRadius: 6,
             fontSize: 14,
             ...(status.type === "ok"
-              ? { backgroundColor: "#dafbe1", color: "#1a7f37", border: "1px solid #2da44e" }
-              : { backgroundColor: "#ffebe9", color: "#cf222e", border: "1px solid #cf222e" }),
+              ? { backgroundColor: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }
+              : { backgroundColor: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger)" }),
           }}
         >
           {status.text}
@@ -127,8 +127,8 @@ export default function DataSettings({ onChanged }: { onChanged: () => void }) {
 }
 
 const cardStyle: React.CSSProperties = {
-  backgroundColor: "#fff",
-  border: "1px solid #d0d7de",
+  backgroundColor: "var(--surface)",
+  border: "1px solid var(--border)",
   borderRadius: 8,
   padding: 20,
 };
@@ -139,9 +139,9 @@ const btnStyle: React.CSSProperties = {
   minHeight: 36,
   padding: "6px 16px",
   fontSize: 14,
-  border: "1px solid #d0d7de",
+  border: "1px solid var(--border)",
   borderRadius: 6,
   cursor: "pointer",
-  backgroundColor: "#f6f8fa",
-  color: "#1f2328",
+  backgroundColor: "var(--surface-subtle)",
+  color: "var(--text)",
 };

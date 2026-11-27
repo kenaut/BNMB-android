@@ -18,6 +18,8 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 
 import androidx.webkit.WebViewAssetLoader;
 
@@ -47,6 +49,7 @@ public class MainActivity extends Activity {
     private static final int BACKGROUND_COLOR = Color.parseColor("#f7f7f5");
 
     private WebView webView;
+    private ImageView splashView;
     private ValueCallback<Uri[]> fileChooserCallback;
     private UpdateManager updateManager;
     /** 等待用户选择保存位置后再写入的备份内容 */
@@ -87,6 +90,16 @@ public class MainActivity extends Activity {
         }
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                // 启动图只覆盖原生初始化与首个网页加载，不额外延迟进入应用
+                if (splashView != null) {
+                    splashView.setVisibility(View.GONE);
+                    splashView = null;
+                }
+            }
+
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 String path = request.getUrl().getPath();
@@ -133,7 +146,17 @@ public class MainActivity extends Activity {
             }
         });
 
-        setContentView(webView);
+        FrameLayout content = new FrameLayout(this);
+        content.addView(webView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        splashView = new ImageView(this);
+        splashView.setBackgroundColor(BACKGROUND_COLOR);
+        splashView.setImageResource(R.drawable.splash_brand);
+        splashView.setScaleType(ImageView.ScaleType.CENTER);
+        splashView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        content.addView(splashView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(content);
         // 供数据管理页导出备份：WebView 内 blob 下载不会真正落盘
         webView.addJavascriptInterface(new NativeBridge(), "BNMBNative");
         // 供设置页的版本更新使用

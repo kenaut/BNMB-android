@@ -9,6 +9,7 @@ import {
   getAvailableForms,
   getUnlockedForms,
   isFormMastered,
+  resolveQuestionForms,
   unmasteredInCurrentBatch,
 } from "./mastery";
 
@@ -93,5 +94,38 @@ describe("练习模式与可练形态", () => {
     adventure.practiceMode = "adventure";
     expect(getAvailableForms(adventure)).toEqual(getUnlockedForms(adventure));
     expect(getAvailableForms(adventure)).toHaveLength(8);
+  });
+});
+
+describe("出题形态范围（正向 / 逆向共用）", () => {
+  const fresh = () => createDefaultProgress(); // 闯关模式、仅首批 4 形
+
+  it("未自选时使用当前模式可用形态", () => {
+    expect(resolveQuestionForms(fresh())).toEqual([...FIRST_BATCH]);
+  });
+
+  it("闯关模式自选里混入未解锁形态 → 剔除未解锁项", () => {
+    const p = fresh();
+    expect(resolveQuestionForms(p, ["te", "potential", "passive"])).toEqual(["te"]);
+  });
+
+  it("闯关模式自选全是未解锁形态 → 退回已解锁形态，保证能出题", () => {
+    const p = fresh();
+    expect(resolveQuestionForms(p, ["potential", "passive"])).toEqual([...FIRST_BATCH]);
+  });
+
+  it("自由模式自选未解锁形态不受限制", () => {
+    const p = fresh();
+    p.practiceMode = "free";
+    expect(resolveQuestionForms(p, ["potential", "causative_passive"])).toEqual([
+      "potential",
+      "causative_passive",
+    ]);
+  });
+
+  it("自由模式未自选 → 全部形态", () => {
+    const p = fresh();
+    p.practiceMode = "free";
+    expect(resolveQuestionForms(p)).toEqual([...CONJUGATABLE_FORMS]);
   });
 });

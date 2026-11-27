@@ -5,13 +5,13 @@ import { verbs } from "../data/verbs";
 import RubyText from "./RubyText";
 
 const card: CSSProperties = {
-  backgroundColor: "#fff",
-  border: "1px solid #d0d7de",
+  backgroundColor: "var(--surface)",
+  border: "1px solid var(--border)",
   borderRadius: 8,
   padding: "16px 20px",
 };
 
-const muted: CSSProperties = { color: "#57606a" };
+const muted: CSSProperties = { color: "var(--text-secondary)" };
 
 /** 四类动词的固定展示顺序（五段 → 一段 → サ变 → カ变） */
 const TYPE_ORDER: VerbType[] = ["godan", "ichidan", "suru", "kuru"];
@@ -237,7 +237,7 @@ export default function LearnScreen() {
         <p style={muted}>日语动词按活用规则分为三类。分类决定变形规则，做题前先学会判断类别。</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12 }}>
           {CLASS_DOCS.map((c) => (
-            <div key={c.type} style={{ border: "1px solid #eaeef2", borderRadius: 6, padding: "12px 16px" }}>
+            <div key={c.type} style={{ border: "1px solid var(--border-muted)", borderRadius: 6, padding: "12px 16px" }}>
               <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 16 }}>{c.title}</h3>
               <p style={{ ...muted, fontSize: 14, margin: "0 0 8px" }}>{c.desc}</p>
               <p style={{ fontSize: 15, margin: "0 0 4px" }}>
@@ -248,7 +248,7 @@ export default function LearnScreen() {
                   </span>
                 ))}
               </p>
-              {c.warn && <p style={{ fontSize: 13, color: "#9a6700", margin: 0 }}>注意：{c.warn}</p>}
+              {c.warn && <p style={{ fontSize: 13, color: "var(--warning-text)", margin: 0 }}>注意：{c.warn}</p>}
             </div>
           ))}
         </div>
@@ -276,7 +276,7 @@ export default function LearnScreen() {
             <details
               key={doc.form}
               className="form-doc"
-              style={{ border: "1px solid #eaeef2", borderRadius: 6, backgroundColor: "#fff" }}
+              style={{ border: "1px solid var(--border-muted)", borderRadius: 6, backgroundColor: "var(--surface)" }}
             >
               <summary
                 style={{
@@ -299,7 +299,7 @@ export default function LearnScreen() {
                         <strong>{VERB_TYPE_LABELS[t]}</strong>：{r.rule}（
                         <RubyText kanji={c.kanji} kana={c.kana} />
                         ）
-                        {r.note && <span style={{ color: "#9a6700" }}>　※ {r.note}</span>}
+                        {r.note && <span style={{ color: "var(--warning-text)" }}>　※ {r.note}</span>}
                       </li>
                     );
                   })}

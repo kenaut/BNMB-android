@@ -8,7 +8,13 @@ import {
   STORAGE_KEY,
   type StorageLike,
 } from "./persistence";
-import { createDefaultProgress, PROGRESS_VERSION, type PracticeMode, type UserProgress } from "./progress";
+import {
+  createDefaultProgress,
+  MAX_AVATAR_LENGTH,
+  PROGRESS_VERSION,
+  type PracticeMode,
+  type UserProgress,
+} from "./progress";
 
 function fakeStorage(initial?: Record<string, string>): StorageLike {
   const map = new Map(Object.entries(initial ?? {}));
@@ -120,6 +126,7 @@ describe("preferences 持久化", () => {
       showFurigana: true,
       showFormLabel: true,
       showVerbType: true,
+      showSpecialTag: true,
     });
   });
 
@@ -128,7 +135,12 @@ describe("preferences 持久化", () => {
     saveProgress(
       {
         ...sampleProgress(),
-        preferences: { showFurigana: false, showFormLabel: true, showVerbType: false },
+        preferences: {
+          showFurigana: false,
+          showFormLabel: true,
+          showVerbType: false,
+          showSpecialTag: false,
+        },
       },
       s,
     );
@@ -136,6 +148,7 @@ describe("preferences 持久化", () => {
       showFurigana: false,
       showFormLabel: true,
       showVerbType: false,
+      showSpecialTag: false,
     });
   });
 
@@ -150,7 +163,84 @@ describe("preferences 持久化", () => {
       showFurigana: false,
       showFormLabel: true,
       showVerbType: true,
+      showSpecialTag: true,
     });
+  });
+});
+
+describe("theme 持久化", () => {
+  it("默认跟随系统", () => {
+    expect(loadProgress(fakeStorage()).theme).toBe("system");
+  });
+
+  it("合法值保存读回一致", () => {
+    const s = fakeStorage();
+    saveProgress({ ...sampleProgress(), theme: "dark" }, s);
+    expect(loadProgress(s).theme).toBe("dark");
+    saveProgress({ ...sampleProgress(), theme: "light" }, s);
+    expect(loadProgress(s).theme).toBe("light");
+  });
+
+  it("非法值或旧存档缺字段 → 回退跟随系统", () => {
+    const s = fakeStorage({
+      [STORAGE_KEY]: JSON.stringify({ version: PROGRESS_VERSION, theme: "neon" }),
+    });
+    expect(loadProgress(s).theme).toBe("system");
+  });
+});
+
+describe("soundVolume 持久化", () => {
+  it("默认音量为 0.6", () => {
+    expect(loadProgress(fakeStorage()).soundVolume).toBe(0.6);
+  });
+
+  it("合法值保存读回一致（含静音 0）", () => {
+    const s = fakeStorage();
+    saveProgress({ ...sampleProgress(), soundVolume: 0.35 }, s);
+    expect(loadProgress(s).soundVolume).toBe(0.35);
+    saveProgress({ ...sampleProgress(), soundVolume: 0 }, s);
+    expect(loadProgress(s).soundVolume).toBe(0);
+    saveProgress({ ...sampleProgress(), soundVolume: 1 }, s);
+    expect(loadProgress(s).soundVolume).toBe(1);
+  });
+
+  it("越界、非数字或旧存档缺字段 → 回退默认音量", () => {
+    const cases = [1.5, -0.2, "0.5", null, Number.NaN];
+    for (const value of cases) {
+      const s = fakeStorage({
+        [STORAGE_KEY]: JSON.stringify({ version: PROGRESS_VERSION, soundVolume: value }),
+      });
+      expect(loadProgress(s).soundVolume).toBe(0.6);
+    }
+  });
+});
+
+describe("profile.avatar 持久化", () => {
+  it("默认没有头像（使用内置默认头像）", () => {
+    expect(loadProgress(fakeStorage()).profile.avatar).toBeUndefined();
+  });
+
+  it("预设 ID 与上传图片 data URL 都能保存读回", () => {
+    const s = fakeStorage();
+    saveProgress({ ...sampleProgress(), profile: { nickname: "小明", avatar: "cat" } }, s);
+    expect(loadProgress(s).profile.avatar).toBe("cat");
+    const dataUrl = "data:image/jpeg;base64,AAAA";
+    saveProgress({ ...sampleProgress(), profile: { nickname: "小明", avatar: dataUrl } }, s);
+    expect(loadProgress(s).profile.avatar).toBe(dataUrl);
+  });
+
+  it("超长数据或非字符串时丢弃（避免撑爆 localStorage）", () => {
+    const s = fakeStorage({
+      [STORAGE_KEY]: JSON.stringify({
+        version: PROGRESS_VERSION,
+        profile: { nickname: "小明", avatar: "x".repeat(MAX_AVATAR_LENGTH + 1) },
+      }),
+    });
+    expect(loadProgress(s).profile.avatar).toBeUndefined();
+    const s2 = fakeStorage({
+      [STORAGE_KEY]: JSON.stringify({ version: PROGRESS_VERSION, profile: { avatar: 123 } }),
+    });
+    expect(loadProgress(s2).profile.avatar).toBeUndefined();
   });
 });
 

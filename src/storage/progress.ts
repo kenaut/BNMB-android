@@ -35,7 +35,17 @@ export interface RecentResult {
 /** 个人资料（仅本地，不含任何敏感信息） */
 export interface Profile {
   nickname: string;
+  /**
+   * 头像：
+   * - undefined：默认头像
+   * - 预设 ID（如 "cat"）：内置 SVG 头像
+   * - data:image/...：用户上传的本地图片（已压缩为小尺寸 data URL）
+   */
+  avatar?: string;
 }
+
+/** 头像数据最大长度（防止 localStorage 被大图撑爆，约 200KB） */
+export const MAX_AVATAR_LENGTH = 200_000;
 
 /** 做题偏好：控制题目界面显示的提示信息，默认全部开启 */
 export interface Preferences {
@@ -45,12 +55,15 @@ export interface Preferences {
   showFormLabel: boolean;
   /** 是否显示动词属性（五段 / 一段 / サ变 / カ变） */
   showVerbType: boolean;
+  /** 是否显示特殊变化标签（如 行く 的促音便例外） */
+  showSpecialTag: boolean;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   showFurigana: true,
   showFormLabel: true,
   showVerbType: true,
+  showSpecialTag: true,
 };
 
 /**
@@ -59,6 +72,19 @@ export const DEFAULT_PREFERENCES: Preferences = {
  * - free：自由模式，全部形态直接开放练习
  */
 export type PracticeMode = "adventure" | "free";
+
+/**
+ * 界面主题：
+ * - system：跟随系统深浅色（默认）
+ * - light：固定浅色
+ * - dark：固定深色
+ */
+export type ThemeMode = "system" | "light" | "dark";
+
+export const DEFAULT_THEME: ThemeMode = "system";
+
+/** 默认提示音音量（0~1） */
+export const DEFAULT_SOUND_VOLUME = 0.6;
 
 export interface UserProgress {
   version: number;
@@ -82,6 +108,10 @@ export interface UserProgress {
    * （首次打开应用时弹窗询问，之后可在设置页切换）。
    */
   practiceMode?: PracticeMode;
+  /** 界面主题，默认跟随系统 */
+  theme: ThemeMode;
+  /** 提示音音量（0~1），0 表示静音 */
+  soundVolume: number;
 }
 
 export const MAX_RECENT_RESULTS = 50;
@@ -99,6 +129,8 @@ export function createDefaultProgress(): UserProgress {
     forms: {},
     verbs: {},
     recentResults: [],
+    theme: DEFAULT_THEME,
+    soundVolume: DEFAULT_SOUND_VOLUME,
   };
 }
 
@@ -145,6 +177,7 @@ export function sanitizeProgress(raw: unknown): UserProgress | null {
 
   const streakRaw = isRecord(raw.streak) ? raw.streak : {};
   const prefsRaw = isRecord(raw.preferences) ? raw.preferences : {};
+  const profileRaw = isRecord(raw.profile) ? raw.profile : {};
   const recentResults = Array.isArray(raw.recentResults)
     ? raw.recentResults.filter(isRecentResult).slice(0, MAX_RECENT_RESULTS)
     : [];
@@ -153,9 +186,15 @@ export function sanitizeProgress(raw: unknown): UserProgress | null {
     version: PROGRESS_VERSION,
     profile: {
       nickname:
-        isRecord(raw.profile) && typeof raw.profile.nickname === "string"
-          ? raw.profile.nickname.slice(0, 24)
+        typeof profileRaw.nickname === "string"
+          ? profileRaw.nickname.slice(0, 24)
           : "学习者",
+      avatar:
+        typeof profileRaw.avatar === "string" &&
+        profileRaw.avatar.length > 0 &&
+        profileRaw.avatar.length <= MAX_AVATAR_LENGTH
+          ? profileRaw.avatar
+          : undefined,
     },
     preferences: {
       showFurigana:
@@ -170,6 +209,10 @@ export function sanitizeProgress(raw: unknown): UserProgress | null {
         typeof prefsRaw.showVerbType === "boolean"
           ? prefsRaw.showVerbType
           : DEFAULT_PREFERENCES.showVerbType,
+      showSpecialTag:
+        typeof prefsRaw.showSpecialTag === "boolean"
+          ? prefsRaw.showSpecialTag
+          : DEFAULT_PREFERENCES.showSpecialTag,
     },
     totalQuestions: num(raw.totalQuestions),
     correctAnswers: num(raw.correctAnswers),
@@ -188,5 +231,16 @@ export function sanitizeProgress(raw: unknown): UserProgress | null {
       raw.practiceMode === "adventure" || raw.practiceMode === "free"
         ? raw.practiceMode
         : undefined,
+    theme:
+      raw.theme === "light" || raw.theme === "dark" || raw.theme === "system"
+        ? raw.theme
+        : DEFAULT_THEME,
+    soundVolume:
+      typeof raw.soundVolume === "number" &&
+      Number.isFinite(raw.soundVolume) &&
+      raw.soundVolume >= 0 &&
+      raw.soundVolume <= 1
+        ? raw.soundVolume
+        : DEFAULT_SOUND_VOLUME,
   };
 }

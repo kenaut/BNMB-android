@@ -77,8 +77,8 @@ export default function VerbTable() {
     <div>
       <div
         style={{
-          backgroundColor: "#fff",
-          border: "1px solid #d0d7de",
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--border)",
           borderRadius: 8,
           padding: 16,
           marginBottom: 12,
@@ -96,10 +96,10 @@ export default function VerbTable() {
             width: "100%",
             fontSize: 16,
             padding: "8px 12px",
-            border: "1px solid #d0d7de",
+            border: "1px solid var(--border)",
             borderRadius: 6,
             outline: "none",
-            color: "#1f2328",
+            color: "var(--text)",
           }}
         />
 
@@ -107,7 +107,7 @@ export default function VerbTable() {
         <Chips label="级别" options={LEVEL_OPTIONS} value={levelFilter} onChange={setLevelFilter} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 14, color: "#57606a" }}>显示形态</span>
+          <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>显示形态</span>
           <select
             value={formFilter}
             onChange={(e) => setFormFilter(e.target.value as FormFilter)}
@@ -115,10 +115,10 @@ export default function VerbTable() {
             style={{
               fontSize: 14,
               padding: "6px 10px",
-              border: "1px solid #d0d7de",
+              border: "1px solid var(--border)",
               borderRadius: 6,
-              backgroundColor: "#fff",
-              color: "#1f2328",
+              backgroundColor: "var(--surface)",
+              color: "var(--text)",
             }}
           >
             <option value="all">全部形态</option>
@@ -131,7 +131,7 @@ export default function VerbTable() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 14, color: "#57606a" }}>
+          <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>
             共 {filtered.length} / {verbs.length} 个动词
           </span>
           {filtering && (
@@ -142,9 +142,9 @@ export default function VerbTable() {
                 fontSize: 13,
                 padding: "3px 12px",
                 borderRadius: 12,
-                border: "1px solid #d0d7de",
-                backgroundColor: "#f6f8fa",
-                color: "#57606a",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--surface-subtle)",
+                color: "var(--text-secondary)",
               }}
             >
               清空搜索与筛选
@@ -154,7 +154,7 @@ export default function VerbTable() {
       </div>
 
       <div className="table-scroll">
-        <table style={{ borderCollapse: "collapse", width: "100%", backgroundColor: "#fff" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", backgroundColor: "var(--surface)" }}>
           <thead>
             <tr>
               <Th>辞书形</Th>
@@ -174,8 +174,8 @@ export default function VerbTable() {
                   style={{
                     padding: "32px 12px",
                     textAlign: "center",
-                    color: "#57606a",
-                    backgroundColor: "#fff",
+                    color: "var(--text-secondary)",
+                    backgroundColor: "var(--surface)",
                   }}
                 >
                   没有匹配的动词，试试换个关键词或筛选条件。
@@ -221,7 +221,7 @@ function Chips<T extends string>({
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <span style={{ fontSize: 14, color: "#57606a", minWidth: 28 }}>{label}</span>
+      <span style={{ fontSize: 14, color: "var(--text-secondary)", minWidth: 28 }}>{label}</span>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -245,21 +245,21 @@ function chipStyle(active: boolean): CSSProperties {
     fontSize: 14,
     padding: "5px 14px",
     borderRadius: 16,
-    border: `1px solid ${active ? "#0969da" : "#d0d7de"}`,
-    backgroundColor: active ? "#ddf4ff" : "#fff",
-    color: active ? "#0969da" : "#1f2328",
+    border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+    backgroundColor: active ? "var(--accent-bg)" : "var(--surface)",
+    color: active ? "var(--accent)" : "var(--text)",
     fontWeight: active ? 600 : 400,
   };
 }
 
 function Th({ children }: { children: ReactNode }) {
   return (
-    <th style={{ borderBottom: "2px solid #ccc", textAlign: "left", padding: "6px 10px", whiteSpace: "nowrap" }}>
+    <th style={{ borderBottom: "2px solid var(--border)", textAlign: "left", padding: "6px 10px", whiteSpace: "nowrap" }}>
       {children}
     </th>
   );
 }
 
 function Td({ children }: { children: ReactNode }) {
-  return <td style={{ borderBottom: "1px solid #eee", padding: "6px 10px", whiteSpace: "nowrap" }}>{children}</td>;
+  return <td style={{ borderBottom: "1px solid var(--border-muted)", padding: "6px 10px", whiteSpace: "nowrap" }}>{children}</td>;
 }

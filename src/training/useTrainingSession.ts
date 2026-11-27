@@ -1,9 +1,11 @@
 import { useEffect, useReducer, useRef, useState } from "react";
+import { playSound } from "../audio/sound";
 import type { ConjugatableFormId } from "../domain/conjugate";
-import { verbs } from "../data/verbs";
+import type { VerbLevel } from "../domain/types";
+import { filterVerbsByLevels } from "../data/verbs";
 import { createQuestions, type Question } from "../quiz/quiz";
 import { loadProgress, saveProgress } from "../storage/persistence";
-import { getAvailableForms } from "./mastery";
+import { resolveQuestionForms } from "./mastery";
 import { applySessionResult } from "./progressUpdate";
 import {
   answerSession,
@@ -46,8 +48,8 @@ export interface TrainingSession {
   currentQuestion: Question | null;
   /** 已用毫秒（由时间戳计算，组件按此渲染） */
   elapsedMs: number;
-  /** 开始一局；forms 传入自选变形范围（空/不传 = 按练习模式默认） */
-  start: (total?: number, forms?: ConjugatableFormId[]) => void;
+  /** 开始一局；forms 传自选变形范围、levels 传自选等级范围（空/不传 = 按练习模式默认） */
+  start: (total?: number, forms?: ConjugatableFormId[], levels?: VerbLevel[]) => void;
   answer: (isCorrect: boolean) => void;
   next: () => void;
   restart: () => void;
@@ -67,6 +69,8 @@ export function useTrainingSession(): TrainingSession {
   const totalRef = useRef(DEFAULT_QUESTION_COUNT);
   /** 自选变形范围（null = 按练习模式默认）；「再来一局」沿用同一范围 */
   const formsRef = useRef<ConjugatableFormId[] | null>(null);
+  /** 自选等级范围（null = 全部级别）；「再来一局」沿用同一范围 */
+  const levelsRef = useRef<VerbLevel[] | null>(null);
   const savedResultAtRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -81,16 +85,26 @@ export function useTrainingSession(): TrainingSession {
     const result = getResult(state);
     if (!result || savedResultAtRef.current === result.startedAt) return;
     savedResultAtRef.current = result.startedAt;
-    saveProgress(applySessionResult(loadProgress(), result));
+    const progress = loadProgress();
+    saveProgress(applySessionResult(progress, result));
+    // 完成提示音：与成绩写入共用同一把「每局一次」的守卫，避免 StrictMode 重放
+    playSound("complete", progress.soundVolume);
   }, [state]);
 
-  const begin = (total: number, forms?: ConjugatableFormId[]) => {
+  const begin = (
+    total: number,
+    forms?: ConjugatableFormId[],
+    levels?: readonly VerbLevel[],
+  ) => {
     totalRef.current = total;
     // 出题范围：自选变形优先，否则按练习模式（自由=全部 / 闯关=按批解锁）；
-    // 全组合洗牌后取前 N，回合内组合不重复
+    // 自选形态还会与当前模式可用范围取交集，正向 / 逆向共用同一范围。
+    // 等级按自选范围过滤；全组合洗牌后取前 N，回合内组合不重复
     formsRef.current = forms && forms.length > 0 ? forms : null;
-    const scope = formsRef.current ?? getAvailableForms(loadProgress());
-    setQuestions(createQuestions(total, verbs, scope));
+    levelsRef.current = levels && levels.length > 0 ? [...levels] : null;
+    const scope = resolveQuestionForms(loadProgress(), formsRef.current ?? undefined);
+    const pool = filterVerbsByLevels(levelsRef.current ?? undefined);
+    setQuestions(createQuestions(total, pool, scope));
     dispatch({ type: "start", total, now: Date.now() });
   };
 
@@ -101,7 +115,8 @@ export function useTrainingSession(): TrainingSession {
     questions,
     currentQuestion,
     elapsedMs: getElapsedMs(state, now),
-    start: (total = DEFAULT_QUESTION_COUNT, forms?: ConjugatableFormId[]) => begin(total, forms),
+    start: (total = DEFAULT_QUESTION_COUNT, forms?: ConjugatableFormId[], levels?: VerbLevel[]) =>
+      begin(total, forms, levels),
     answer: (isCorrect) =>
       dispatch({
         type: "answer",
@@ -112,7 +127,8 @@ export function useTrainingSession(): TrainingSession {
           : undefined,
       }),
     next: () => dispatch({ type: "continue" }),
-    restart: () => begin(totalRef.current, formsRef.current ?? undefined),
+    restart: () =>
+      begin(totalRef.current, formsRef.current ?? undefined, levelsRef.current ?? undefined),
     home: () => dispatch({ type: "reset" }),
   };
 }

@@ -13,9 +13,10 @@ export default function ResultScreen({ result, onRestart, onHome }: ResultScreen
 
   return (
     <section
+      className="fade-slide-in"
       style={{
-        backgroundColor: "#fff",
-        border: "1px solid #d0d7de",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 8,
         padding: "32px 24px",
         textAlign: "center",
@@ -23,10 +24,10 @@ export default function ResultScreen({ result, onRestart, onHome }: ResultScreen
     >
       <h2 style={{ marginTop: 0 }}>{allCorrect ? "全部答对，太棒了！" : "训练完成！"}</h2>
 
-      <div style={{ fontSize: 56, fontWeight: 700, color: "#1f883d", lineHeight: 1.1 }}>
+      <div style={{ fontSize: 56, fontWeight: 700, color: "var(--success-strong)", lineHeight: 1.1 }}>
         {formatPercent(result.accuracy)}
       </div>
-      <p style={{ color: "#57606a", marginTop: 4 }}>正确率</p>
+      <p style={{ color: "var(--text-secondary)", marginTop: 4 }}>正确率</p>
 
       <div
         style={{
@@ -52,11 +53,11 @@ export default function ResultScreen({ result, onRestart, onHome }: ResultScreen
             minHeight: 40,
             padding: "8px 24px",
             fontSize: 16,
-            border: "1px solid #d0d7de",
+            border: "1px solid var(--border)",
             borderRadius: 6,
             cursor: "pointer",
-            backgroundColor: "#f6f8fa",
-            color: "#1f2328",
+            backgroundColor: "var(--surface-subtle)",
+            color: "var(--text)",
           }}
         >
           返回首页
@@ -70,14 +71,14 @@ function StatBox({ label, value }: { label: string; value: string }) {
   return (
     <div
       style={{
-        border: "1px solid #d0d7de",
+        border: "1px solid var(--border)",
         borderRadius: 8,
         padding: "14px 8px",
-        backgroundColor: "#f6f8fa",
+        backgroundColor: "var(--surface-subtle)",
       }}
     >
       <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{value}</div>
-      <div style={{ color: "#57606a", fontSize: 13, marginTop: 4 }}>{label}</div>
+      <div style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 4 }}>{label}</div>
     </div>
   );
 }
