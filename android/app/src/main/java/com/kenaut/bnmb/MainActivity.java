@@ -4,10 +4,12 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
@@ -32,6 +34,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -47,11 +50,17 @@ public class MainActivity extends Activity {
     private static final int EXPORT_FILE_REQUEST = 101;
     private static final String EXPORT_MIME_TYPE = "application/json";
     private static final int BACKGROUND_COLOR = Color.parseColor("#f7f7f5");
+    /** 与网页深色主题 --bg 一致 */
+    private static final int DARK_BACKGROUND_COLOR = Color.parseColor("#0d1117");
 
     private WebView webView;
     private ImageView splashView;
     private ValueCallback<Uri[]> fileChooserCallback;
     private UpdateManager updateManager;
+    private TextToSpeech textToSpeech;
+    /** 引擎状态会被 JS 桥线程读取，需要可见性保证 */
+    private volatile boolean ttsReady;
+    private volatile boolean ttsJapanese;
     /** 等待用户选择保存位置后再写入的备份内容 */
     private String pendingExportContent;
     private String cachedVideoPath;
@@ -61,7 +70,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        configureSystemBars();
+        configureSystemBars(isNightMode());
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -159,6 +168,9 @@ public class MainActivity extends Activity {
         setContentView(content);
         // 供数据管理页导出备份：WebView 内 blob 下载不会真正落盘
         webView.addJavascriptInterface(new NativeBridge(), "BNMBNative");
+        // 供本地 TTS 使用：引擎初始化是异步的，网页通过 getStatus 轮询可用性
+        initTts();
+        webView.addJavascriptInterface(new TtsBridge(), "BNMBTts");
         // 供设置页的版本更新使用
         webView.addJavascriptInterface(new UpdateBridge(), "BNMBUpdater");
         updateManager = new UpdateManager(this, updateListener);
@@ -170,6 +182,78 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void saveTextFile(String fileName, String content) {
             runOnUiThread(() -> startExport(fileName, content));
+        }
+
+        /** 网页主题切换时同步状态栏 / 导航栏颜色（applyTheme 的唯一入口调用） */
+        @JavascriptInterface
+        public void setSystemBarsDark(boolean dark) {
+            runOnUiThread(() -> configureSystemBars(dark));
+        }
+    }
+
+    /** 初始化系统 TTS 引擎；重复调用用于「重新检测」（例如用户刚装好语音引擎） */
+    private void initTts() {
+        if (textToSpeech != null) {
+            textToSpeech.shutdown();
+            textToSpeech = null;
+        }
+        ttsReady = false;
+        ttsJapanese = false;
+        try {
+            textToSpeech = new TextToSpeech(getApplicationContext(), status -> {
+                TextToSpeech engine = textToSpeech;
+                ttsReady = status == TextToSpeech.SUCCESS && engine != null;
+                if (ttsReady) {
+                    ttsJapanese = engine.isLanguageAvailable(Locale.JAPANESE)
+                            >= TextToSpeech.LANG_AVAILABLE;
+                }
+            });
+        } catch (Exception e) {
+            // 设备没有任何 TTS 引擎时构造可能直接失败
+            ttsReady = false;
+        }
+    }
+
+    /** 本地 TTS 桥：状态查询为同步返回，朗读与检测切回主线程 */
+    private class TtsBridge {
+        @JavascriptInterface
+        public String getStatus() {
+            return "{\"ready\":" + ttsReady + ",\"japanese\":" + (ttsReady && ttsJapanese) + "}";
+        }
+
+        @JavascriptInterface
+        public void speak(String text, float volume) {
+            runOnUiThread(() -> {
+                TextToSpeech engine = textToSpeech;
+                if (!ttsReady || engine == null || text == null || text.isEmpty()) return;
+                engine.setLanguage(Locale.JAPANESE);
+                Bundle params = new Bundle();
+                params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume);
+                // QUEUE_FLUSH：新朗读打断上一段，与网页端「同时只播一段」一致
+                engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, "bnmb-tts");
+            });
+        }
+
+        @JavascriptInterface
+        public void stop() {
+            runOnUiThread(() -> {
+                if (textToSpeech != null) textToSpeech.stop();
+            });
+        }
+
+        @JavascriptInterface
+        public void refresh() {
+            runOnUiThread(() -> initTts());
+        }
+
+        /** 跳转系统「文字转语音输出」设置，便于选择引擎与下载日语语音数据 */
+        @JavascriptInterface
+        public void openSettings() {
+            try {
+                startActivity(new Intent("com.android.settings.TTS_SETTINGS"));
+            } catch (Exception ignored) {
+                // 极少数 ROM 没有此页面，网页端会保留文字指引
+            }
         }
     }
 
@@ -334,13 +418,22 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** 状态栏/导航栏与应用背景同色，并让图标适配浅色背景（含刘海屏情况） */
-    private void configureSystemBars() {
-        getWindow().setStatusBarColor(BACKGROUND_COLOR);
-        int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+    /** 启动时先跟随系统深浅色，随后网页 applyTheme 会按用户设置再次同步 */
+    private boolean isNightMode() {
+        return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    /** 状态栏/导航栏跟随应用主题：深色主题用深色背景 + 浅色图标，浅色主题反之 */
+    private void configureSystemBars(boolean dark) {
+        int background = dark ? DARK_BACKGROUND_COLOR : BACKGROUND_COLOR;
+        getWindow().setStatusBarColor(background);
+        int flags = dark ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            getWindow().setNavigationBarColor(BACKGROUND_COLOR);
-            flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            getWindow().setNavigationBarColor(background);
+            if (!dark) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            }
         } else {
             // Android 7.x 不支持浅色导航栏图标，改用深色导航栏
             getWindow().setNavigationBarColor(Color.parseColor("#1f2328"));
@@ -387,6 +480,11 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+            textToSpeech = null;
+        }
         if (updateManager != null) {
             updateManager.shutdown();
         }

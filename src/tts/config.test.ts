@@ -33,6 +33,34 @@ describe("isTtsReady", () => {
     expect(isTtsReady({ ...config, apiKey: "  " })).toBe(false);
     expect(isTtsReady({ ...config, baseUrl: "" })).toBe(false);
   });
+
+  it("本地 TTS 只看引擎可用标记，不要求地址和密钥", () => {
+    const local = {
+      ...DEFAULT_TTS_CONFIG,
+      provider: "android" as const,
+      baseUrl: "",
+      apiKey: "",
+      model: "",
+      voice: "",
+    };
+    expect(isTtsReady({ ...local, verified: true })).toBe(true);
+    expect(isTtsReady({ ...local, verified: false })).toBe(false);
+  });
+
+  it("存档中的 android provider 可正常读回", () => {
+    const s = fakeStorage();
+    const config = {
+      ...DEFAULT_TTS_CONFIG,
+      provider: "android" as const,
+      baseUrl: "",
+      apiKey: "",
+      model: "",
+      voice: "",
+      verified: true,
+    };
+    saveTtsConfig(config, s);
+    expect(loadTtsConfig(s)).toEqual(config);
+  });
 });
 
 describe("speechEndpoint", () => {

@@ -10,9 +10,12 @@ import {
 
 type Status = { type: "ok" | "error"; text: string } | null;
 
-/** 安卓壳通过 addJavascriptInterface 注入：WebView 内 blob 下载不会真正落盘 */
+/** 安卓壳通过 addJavascriptInterface 注入的原生桥 */
 interface NativeExportBridge {
+  /** WebView 内 blob 下载不会真正落盘，由原生写文件 */
   saveTextFile: (fileName: string, content: string) => void;
+  /** 同步状态栏 / 导航栏深浅色（旧版安卓壳没有此方法，可选） */
+  setSystemBarsDark?: (dark: boolean) => void;
 }
 
 declare global {

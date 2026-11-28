@@ -11,10 +11,19 @@ describe("TTS 服务商预设", () => {
     expect(new Set(TTS_PROVIDER_IDS).size).toBe(TTS_PROVIDERS.length);
     for (const p of TTS_PROVIDERS) {
       expect(p.label.trim()).not.toBe("");
+      // 本地 TTS 走系统引擎，没有地址 / 模型 / 音色字段
+      if (p.local) continue;
       expect(p.baseUrl.trim()).not.toBe("");
       expect(p.model.trim()).not.toBe("");
       expect(p.voice.trim()).not.toBe("");
     }
+  });
+
+  it("本地 TTS 置顶且标记 local，未知 id 仍回退 OpenAI 兼容", () => {
+    expect(TTS_PROVIDERS[0].id).toBe("android");
+    expect(TTS_PROVIDERS[0].local).toBe(true);
+    expect(getTtsProvider("android").local).toBe(true);
+    expect(getTtsProvider("unknown" as never).id).toBe("openai");
   });
 
   it("覆盖 OpenAI 兼容与三种原生协议", () => {

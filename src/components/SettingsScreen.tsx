@@ -13,6 +13,13 @@ import {
 } from "../tts/config";
 import { getTtsProvider, TTS_PROVIDERS, type TtsProviderId } from "../tts/providers";
 import { playSpeech } from "../tts/speech";
+import {
+  getAndroidTtsStatus,
+  isAndroidTtsUsable,
+  openAndroidTtsSettings,
+  refreshAndroidTts,
+  type AndroidTtsStatus,
+} from "../tts/androidBridge";
 
 const MODE_INFO: Record<PracticeMode, { title: string; desc: string }> = {
   adventure: {
@@ -293,6 +300,16 @@ function BackToSettings({ onClick }: { onClick: () => void }) {
 
 /** TTS 表单字段样式 */
 const ttsLabelStyle = { display: "grid", gap: 4, fontSize: 14 } as const;
+/** TTS 页次要按钮（重新检测 / 系统设置 / 清除配置共用） */
+const secondaryBtnStyle = {
+  padding: "8px 16px",
+  fontSize: 14,
+  borderRadius: 6,
+  border: "1px solid var(--border)",
+  backgroundColor: "var(--surface)",
+  color: "var(--text)",
+  cursor: "pointer",
+} as const;
 const ttsInputStyle = {
   width: "100%",
   boxSizing: "border-box",
@@ -320,6 +337,10 @@ export default function SettingsScreen({
   const [tts, setTts] = useState<TtsConfig>(() => loadTtsConfig() ?? DEFAULT_TTS_CONFIG);
   const [ttsTesting, setTtsTesting] = useState(false);
   const [ttsMessage, setTtsMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  /** 本地 TTS 引擎的实时状态（null = 非安卓壳），与配置里的 verified 分开展示 */
+  const [androidStatus, setAndroidStatus] = useState<AndroidTtsStatus | null>(() =>
+    getAndroidTtsStatus(),
+  );
 
   const pick = (m: PracticeMode) => {
     persistMode(m);
@@ -337,16 +358,18 @@ export default function SettingsScreen({
     setSoundVolume(value);
   };
 
-  /** 切换服务商：自动带出该服务商的默认地址、模型与音色 */
+  /** 切换服务商：自动带出该服务商的默认地址、模型与音色；本地 TTS 按引擎实时状态直接启用 */
   const changeProvider = (id: TtsProviderId) => {
     const preset = getTtsProvider(id);
+    const status = preset.local ? getAndroidTtsStatus() : null;
+    if (preset.local) setAndroidStatus(status);
     const next: TtsConfig = {
       ...tts,
       provider: id,
       baseUrl: preset.baseUrl,
       model: preset.model,
       voice: preset.voice,
-      verified: false,
+      verified: preset.local ? isAndroidTtsUsable(status) : false,
     };
     setTts(next);
     saveTtsConfig(next);
@@ -399,6 +422,48 @@ export default function SettingsScreen({
     } finally {
       setTtsTesting(false);
     }
+  };
+
+  /** 本地 TTS 试听：成功即启用（无需连接测试，引擎状态已在原生侧确认） */
+  const testLocalTts = async () => {
+    setTtsTesting(true);
+    setTtsMessage(null);
+    try {
+      await playSpeech("書きます", tts);
+      const next = { ...tts, verified: true };
+      setTts(next);
+      saveTtsConfig(next);
+      setTtsMessage({ ok: true, text: "本地朗读已启用。" });
+    } catch (err) {
+      const next = { ...tts, verified: false };
+      setTts(next);
+      saveTtsConfig(next);
+      setTtsMessage({
+        ok: false,
+        text: err instanceof Error ? err.message : "本地朗读失败，请检查语音引擎。",
+      });
+    } finally {
+      setTtsTesting(false);
+    }
+  };
+
+  /** 重新检测：原生重建引擎（异步），稍后读取状态并更新启用标记 */
+  const recheckLocalTts = () => {
+    refreshAndroidTts();
+    setTtsMessage(null);
+    window.setTimeout(() => {
+      const status = getAndroidTtsStatus();
+      setAndroidStatus(status);
+      const usable = isAndroidTtsUsable(status);
+      const next = { ...tts, verified: usable };
+      setTts(next);
+      saveTtsConfig(next);
+      setTtsMessage(
+        usable
+          ? { ok: true, text: "检测成功，本地朗读已启用。" }
+          : { ok: false, text: "仍不可用：请按上方指引安装引擎并下载日语语音数据，然后再试。" },
+      );
+    }, 800);
   };
 
   const resetTts = () => {
@@ -497,6 +562,8 @@ export default function SettingsScreen({
   if (page === "tts") {
     const enabled = isTtsReady(tts);
     const preset = getTtsProvider(tts.provider);
+    const isLocal = preset.local === true;
+    const localUsable = isAndroidTtsUsable(androidStatus);
     return (
       <div style={{ display: "grid", gap: 16 }}>
         <BackToSettings onClick={() => setPage("main")} />
@@ -510,7 +577,7 @@ export default function SettingsScreen({
         >
           <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>朗读（TTS）</h2>
           <p style={{ margin: "0 0 16px", fontSize: 14, color: "var(--text-secondary)" }}>
-            支持 OpenAI 兼容接口与 ElevenLabs / MiniMax / 通义千问 等原生协议：题目出现时自动朗读题面一次，答对后再朗读正确答案；连接测试通过后才会显示朗读按钮。
+            安卓本地 TTS 使用系统引擎离线朗读，可用时默认开启；也可切换 OpenAI 兼容接口与 ElevenLabs / MiniMax / 通义千问 等云端 AI 服务。题目出现时自动朗读题面一次，答对后再朗读正确答案。
           </p>
 
           <div style={{ display: "grid", gap: 12 }}>
@@ -551,52 +618,85 @@ export default function SettingsScreen({
                 {preset.warning}
               </p>
             )}
-            <label style={ttsLabelStyle}>
-              <span>接口地址</span>
-              <input
-                value={tts.baseUrl}
-                onChange={(e) => patchTtsField({ baseUrl: e.target.value })}
-                placeholder={preset.baseUrl}
-                style={ttsInputStyle}
-              />
-            </label>
-            <label style={ttsLabelStyle}>
-              <span>API Key</span>
-              <input
-                type="password"
-                value={tts.apiKey}
-                autoComplete="off"
-                onChange={(e) => patchTtsField({ apiKey: e.target.value })}
-                placeholder="sk-..."
-                style={ttsInputStyle}
-              />
-            </label>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                gap: 12,
-              }}
-            >
-              <label style={ttsLabelStyle}>
-                <span>模型</span>
-                <input
-                  value={tts.model}
-                  onChange={(e) => patchTtsField({ model: e.target.value })}
-                  placeholder={preset.model}
-                  style={ttsInputStyle}
-                />
-              </label>
-              <label style={ttsLabelStyle}>
-                <span>{preset.voiceLabel ?? "音色"}</span>
-                <input
-                  value={tts.voice}
-                  onChange={(e) => patchTtsField({ voice: e.target.value })}
-                  placeholder={preset.voice}
-                  style={ttsInputStyle}
-                />
-              </label>
-            </div>
+            {isLocal && (
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--surface-subtle)",
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                }}
+              >
+                {androidStatus === null ? (
+                  <span>本地 TTS 仅在安卓应用中可用；当前环境请改用下方云端服务。</span>
+                ) : localUsable ? (
+                  <span style={{ color: "var(--success)" }}>
+                    系统语音引擎可用，可离线朗读日语，无需网络与 API Key。
+                  </span>
+                ) : (
+                  <>
+                    <span style={{ color: "var(--warning-text)", fontWeight: 600 }}>
+                      未检测到可用的日语语音引擎。
+                    </span>
+                    <br />
+                    请安装或启用 <strong>Speech Services（Google 语音服务）</strong>{" "}
+                    等 TTS 引擎，并在系统「文字转语音输出」设置中将其设为首选引擎、下载「日语（日本）」语音数据；完成后点下方「重新检测」。
+                  </>
+                )}
+              </div>
+            )}
+            {!isLocal && (
+              <>
+                <label style={ttsLabelStyle}>
+                  <span>接口地址</span>
+                  <input
+                    value={tts.baseUrl}
+                    onChange={(e) => patchTtsField({ baseUrl: e.target.value })}
+                    placeholder={preset.baseUrl}
+                    style={ttsInputStyle}
+                  />
+                </label>
+                <label style={ttsLabelStyle}>
+                  <span>API Key</span>
+                  <input
+                    type="password"
+                    value={tts.apiKey}
+                    autoComplete="off"
+                    onChange={(e) => patchTtsField({ apiKey: e.target.value })}
+                    placeholder="sk-..."
+                    style={ttsInputStyle}
+                  />
+                </label>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                    gap: 12,
+                  }}
+                >
+                  <label style={ttsLabelStyle}>
+                    <span>模型</span>
+                    <input
+                      value={tts.model}
+                      onChange={(e) => patchTtsField({ model: e.target.value })}
+                      placeholder={preset.model}
+                      style={ttsInputStyle}
+                    />
+                  </label>
+                  <label style={ttsLabelStyle}>
+                    <span>{preset.voiceLabel ?? "音色"}</span>
+                    <input
+                      value={tts.voice}
+                      onChange={(e) => patchTtsField({ voice: e.target.value })}
+                      placeholder={preset.voice}
+                      style={ttsInputStyle}
+                    />
+                  </label>
+                </div>
+              </>
+            )}
             <label style={ttsLabelStyle}>
               <span>朗读音量</span>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -633,26 +733,36 @@ export default function SettingsScreen({
               flexWrap: "wrap",
             }}
           >
-            <button
-              onClick={() => void testTts()}
-              disabled={ttsTesting}
-              className="btn-primary"
-              style={{ minWidth: 140 }}
-            >
-              {ttsTesting ? "测试中…" : "测试并启用"}
-            </button>
-            <button
-              onClick={resetTts}
-              style={{
-                padding: "8px 16px",
-                fontSize: 14,
-                borderRadius: 6,
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--surface)",
-                color: "var(--text)",
-                cursor: "pointer",
-              }}
-            >
+            {isLocal ? (
+              <>
+                <button
+                  onClick={() => void testLocalTts()}
+                  disabled={!localUsable || ttsTesting}
+                  className="btn-primary"
+                  style={{ minWidth: 140 }}
+                >
+                  {ttsTesting ? "播放中…" : "试听"}
+                </button>
+                <button onClick={recheckLocalTts} style={secondaryBtnStyle}>
+                  重新检测
+                </button>
+                {androidStatus !== null && (
+                  <button onClick={openAndroidTtsSettings} style={secondaryBtnStyle}>
+                    系统 TTS 设置
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                onClick={() => void testTts()}
+                disabled={ttsTesting}
+                className="btn-primary"
+                style={{ minWidth: 140 }}
+              >
+                {ttsTesting ? "测试中…" : "测试并启用"}
+              </button>
+            )}
+            <button onClick={resetTts} style={secondaryBtnStyle}>
               清除配置
             </button>
             <span
@@ -677,16 +787,18 @@ export default function SettingsScreen({
             </p>
           )}
 
-          <p
-            style={{
-              margin: "16px 0 0",
-              fontSize: 12,
-              color: "var(--text-tertiary)",
-              lineHeight: 1.6,
-            }}
-          >
-            API Key 仅保存在本设备浏览器中，不会写入学习进度备份；朗读请求会直接发送到你填写的服务，请使用支持浏览器跨域（CORS）的接口，并注意额度消耗。
-          </p>
+          {!isLocal && (
+            <p
+              style={{
+                margin: "16px 0 0",
+                fontSize: 12,
+                color: "var(--text-tertiary)",
+                lineHeight: 1.6,
+              }}
+            >
+              API Key 仅保存在本设备浏览器中，不会写入学习进度备份；朗读请求会直接发送到你填写的服务，请使用支持浏览器跨域（CORS）的接口，并注意额度消耗。
+            </p>
+          )}
         </section>
       </div>
     );

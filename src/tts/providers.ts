@@ -9,6 +9,7 @@
  */
 
 export type TtsProviderId =
+  | "android"
   | "openai"
   | "siliconflow"
   | "deepinfra"
@@ -24,6 +25,8 @@ export interface TtsProviderPreset {
   label: string;
   /** 是否使用 OpenAI /audio/speech 协议 */
   openaiCompatible: boolean;
+  /** 本地引擎（安卓系统 TTS）：不走网络请求，无地址/模型/音色字段 */
+  local?: boolean;
   /** 选中后自动填入的接口地址 */
   baseUrl: string;
   /** 选中后自动填入的模型 */
@@ -40,8 +43,18 @@ export interface TtsProviderPreset {
   docsUrl?: string;
 }
 
-/** 服务商列表：顺序即设置页下拉的显示顺序 */
+/** 服务商列表：顺序即设置页下拉的显示顺序（本地 TTS 置顶，云端 AI 服务保持原顺序） */
 export const TTS_PROVIDERS: readonly TtsProviderPreset[] = [
+  {
+    id: "android",
+    label: "安卓本地 TTS（离线）",
+    openaiCompatible: false,
+    local: true,
+    baseUrl: "",
+    model: "",
+    voice: "",
+    note: "调用系统语音引擎离线朗读，无需网络和 API Key；需要引擎支持日语。仅在安卓应用中可用。",
+  },
   {
     id: "openai",
     label: "OpenAI / 兼容接口",
@@ -132,7 +145,9 @@ export function isTtsProviderId(value: unknown): value is TtsProviderId {
   return typeof value === "string" && (TTS_PROVIDER_IDS as readonly string[]).includes(value);
 }
 
-/** 按 id 取预设；未知 id 回退到第一项（OpenAI 兼容） */
+/** 按 id 取预设；未知 id 回退到 OpenAI 兼容（不能回退成本地 TTS，避免网页端误选） */
 export function getTtsProvider(id: TtsProviderId): TtsProviderPreset {
-  return TTS_PROVIDERS.find((p) => p.id === id) ?? TTS_PROVIDERS[0];
+  const preset = TTS_PROVIDERS.find((p) => p.id === id);
+  if (preset) return preset;
+  return TTS_PROVIDERS.find((p) => p.id === "openai") as TtsProviderPreset;
 }

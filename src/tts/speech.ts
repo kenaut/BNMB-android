@@ -4,6 +4,7 @@
  * 浏览器需要该接口允许跨域（CORS）请求；失败时抛出可读错误，由调用方决定是否提示。
  */
 import { speechEndpoint, type TtsConfig } from "./config";
+import { speakAndroid } from "./androidBridge";
 
 /** 读取响应里的错误详情（最多 200 字） */
 async function readError(res: Response): Promise<string> {
@@ -204,11 +205,21 @@ export async function synthesizeSpeech(text: string, config: TtsConfig): Promise
 let currentAudio: HTMLAudioElement | null = null;
 
 /**
- * 朗读一段文本：请求音频 → 按配置音量播放。
+ * 朗读一段文本：本地 TTS 直接调用系统引擎；云端服务请求音频 → 按配置音量播放。
  * 返回的 Promise 在开始播放时即完成，不等待音频结束。
  */
 export async function playSpeech(text: string, config: TtsConfig): Promise<void> {
   if (text.trim() === "") return;
+
+  if (config.provider === "android") {
+    // 本地引擎：打断正在播放的云端音频，由原生 QUEUE_FLUSH 打断上一段本地朗读
+    currentAudio?.pause();
+    currentAudio = null;
+    if (!speakAndroid(text, config.volume)) {
+      throw new Error("本地 TTS 不可用，请在设置中检查系统语音引擎。");
+    }
+    return;
+  }
 
   const blob = await synthesizeSpeech(text, config);
   const url = URL.createObjectURL(blob);

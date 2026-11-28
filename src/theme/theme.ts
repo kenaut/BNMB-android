@@ -35,6 +35,10 @@ export function applyTheme(mode: ThemeMode): ResolvedTheme {
     document.documentElement.dataset.theme = resolved;
     document.documentElement.style.colorScheme = resolved;
   }
+  // 安卓壳同步状态栏 / 导航栏颜色；纯浏览器或旧版壳没有此桥时静默跳过
+  if (typeof window !== "undefined") {
+    window.BNMBNative?.setSystemBarsDark?.(resolved === "dark");
+  }
   return resolved;
 }
 

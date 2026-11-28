@@ -46,12 +46,21 @@ export function sanitizeTtsConfig(raw: unknown): TtsConfig | null {
     typeof o.volume === "number" && Number.isFinite(o.volume)
       ? Math.min(1, Math.max(0, o.volume))
       : DEFAULT_TTS_CONFIG.volume;
+  const provider = isTtsProviderId(o.provider) ? o.provider : DEFAULT_TTS_CONFIG.provider;
+  // 本地 TTS 没有地址 / 模型 / 音色，保留空值，不回填云端默认值
+  const local = provider === "android";
   return {
-    provider: isTtsProviderId(o.provider) ? o.provider : DEFAULT_TTS_CONFIG.provider,
-    baseUrl: text(o.baseUrl, DEFAULT_TTS_CONFIG.baseUrl, 500) || DEFAULT_TTS_CONFIG.baseUrl,
+    provider,
+    baseUrl: local
+      ? text(o.baseUrl, "", 500)
+      : text(o.baseUrl, DEFAULT_TTS_CONFIG.baseUrl, 500) || DEFAULT_TTS_CONFIG.baseUrl,
     apiKey: text(o.apiKey, "", 500),
-    model: text(o.model, DEFAULT_TTS_CONFIG.model, 100) || DEFAULT_TTS_CONFIG.model,
-    voice: text(o.voice, DEFAULT_TTS_CONFIG.voice, 100) || DEFAULT_TTS_CONFIG.voice,
+    model: local
+      ? text(o.model, "", 100)
+      : text(o.model, DEFAULT_TTS_CONFIG.model, 100) || DEFAULT_TTS_CONFIG.model,
+    voice: local
+      ? text(o.voice, "", 100)
+      : text(o.voice, DEFAULT_TTS_CONFIG.voice, 100) || DEFAULT_TTS_CONFIG.voice,
     volume,
     verified: o.verified === true,
   };
@@ -106,8 +115,10 @@ export function speechEndpoint(baseUrl: string): string {
 
 /** 只有「连接测试通过且字段齐全」才认为可用于朗读（决定是否显示播放按钮） */
 export function isTtsReady(config: TtsConfig | null): config is TtsConfig {
+  if (config === null) return false;
+  // 本地 TTS 无地址/密钥等字段：原生报告引擎可用（verified）即可朗读
+  if (config.provider === "android") return config.verified;
   return (
-    config !== null &&
     config.verified &&
     config.baseUrl.trim() !== "" &&
     config.apiKey.trim() !== "" &&
